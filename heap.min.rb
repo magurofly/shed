@@ -1,3 +1,6 @@
+=begin
+データ構造 ヒープ
+=end
 # ascending heap
 class Heap
 def initialize(&c);@c,@a=c||:<=>.to_proc,[];end
