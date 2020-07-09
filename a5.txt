@@ -1,0 +1,50 @@
+{"title":"A5"}
+? [     ] you are thirsty, I give you water.
+o If
+x Unless
+x Before
+
+? Just click this button to participate [    ] the contest.
+o in
+x for
+x to
+
+? Do not open the door [    ] I'll concentrate on it.
+o because
+x after
+x although
+
+? You will stay in cold color forever [    ] you acquire algorithms.
+o unless
+x because
+x if
+
+? He specializes [   ] Graph theory.
+o in
+x to
+x for
+
+? Apply [   ] Covid19 Support Package.
+o for
+x at
+x in
+
+? The cat is eligible [    ] a T-shirt.
+o for
+x in
+x to
+
+? Please subscribe [   ] my channel.
+o to
+x in
+x from
+
+? The bridge was washed away [    ] it was raining.
+o while
+x unless
+x if
+
+? He is responsible [    ] answering clarifications.
+o on
+x in
+x for
