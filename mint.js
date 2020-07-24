@@ -9,5 +9,6 @@ class Mint {
 	sub(x) { return new Mint(this.value - x, this.mod); }
 	mul(x) { return new Mint(this.value * x, this.mod); }
 	div(x) { return new Mint(this.value * Mint.inv(x, this.mod), this.mod); }
-	inv() { return new Mint(Mint.inv(this.value, this.mod), this.mod); }
+	pow(x) { return new Mint(Mint.pow(this.value, x, this.mod), this.mod); }
+	inv() { return this.pow(this.mod-2); }
 }
