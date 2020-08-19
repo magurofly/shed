@@ -20,7 +20,7 @@ class SegTree
     @a[i] = @op[@a[i<<1|0], @a[i<<1|1]] while (i >>= 1) > 0
   end
 
-  def fold(l, r)
+  def fold(l, r = l + 1)
     l += @n
     r += @n
     x = y = @a[0]
@@ -29,7 +29,7 @@ class SegTree
         x = @op[x, @a[l]]
         l += 1
       end
-      y = @op[@a[r += 1], y] if (r & 1) == 1
+      y = @op[@a[r -= 1], y] if (r & 1) == 1
       l >>= 1
       r >>= 1
     end
