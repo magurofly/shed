@@ -1,3 +1,5 @@
+// Verified: https://judge.yosupo.jp/submission/20913
+
 struct UnionFind(Vec<usize>, Vec<usize>);
 impl UnionFind {
 	fn new(size: usize) -> Self { Self((0..size).collect(), vec![0; size]) }
