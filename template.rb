@@ -1,8 +1,8 @@
 DEBUG = true
 MOD = 10**9+7
+YESNO = %w(Yes No)
 
 def main
-  
   
 end
 
@@ -11,9 +11,9 @@ def ints; gets.split.map &:to_i; end
 def array(&convert); gets.split.map(&convert); end
 def string; gets.chomp; end
 def rep(n, &b); Array.new(n, &b); end
-def yes; puts "Yes"; end
-def no; puts "No"; end
-def yesno t; t ? Yes : No; end
+def yes; puts YESNO[0]; end
+def no; puts YESNO[1]; end
+def yesno t; t ? yes : no; end
 def max(*xs); xs.max; end
 def min(*xs); xs.max; end
 def minmax(*xs); xs.minmax; end
