@@ -14,6 +14,7 @@ def rep(n, &b); Array.new(n, &b); end
 def yes; puts YESNO[0]; end
 def no; puts YESNO[1]; end
 def yesno t; t ? yes : no; end
+def zip(xs, *yss); Enumerator.new { |y| xs.zip(*yss) { |a| y.yield(*a) } }; end
 def max(*xs); xs.max; end
 def min(*xs); xs.max; end
 def minmax(*xs); xs.minmax; end
