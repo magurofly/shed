@@ -29,6 +29,6 @@ def cumdiff(ys); xs = []; xs.inject { |x, y| xs << (d = y - x); d }; end
 def cumfold(ys, range); r = range.end; r -= 1 if range.exclusive_end?; ys[r] - ys[range.begin-1]; end
 def mod_inv(x, mod); x.pow(mod-2, mod); end
 def mod_div(x, y, mod); x * mod_inv(y, mod) % mod; end
-def bitbrute(size, block); (1<<size).times(&block); end
+def bitbrute(size, &block); (1<<size).times(&block); end
 
 main
