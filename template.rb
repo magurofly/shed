@@ -16,7 +16,7 @@ def no; puts YESNO[1]; end
 def yesno t; t ? yes : no; end
 def zip(xs, *yss); Enumerator.new { |y| xs.zip(*yss) { |a| y.yield(*a) } }; end
 def max(*xs); xs.max; end
-def min(*xs); xs.max; end
+def min(*xs); xs.min; end
 def minmax(*xs); xs.minmax; end
 def matrix(h, w, fill=nil); Array.new(h) { [fill] * w }; end
 def debug(x); STDERR.puts x.inspect if DEBUG; end
