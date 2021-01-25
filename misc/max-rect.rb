@@ -1,5 +1,6 @@
-# 最大長方形を計算する
+# ヒストグラム中の最大長方形を計算する
 # @param histogram 最後の要素は0である必要がある
+# @return 最大長方形の面積
 def max_rect(histogram)
   rect = 0
   stack = []
