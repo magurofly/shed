@@ -7,7 +7,7 @@ fn main() {
   input!(a: Usize1, b: Usize1, x: i32, y: i32);
   // 0-99: A, 100-199: B
   
-  // edges is vector<(from, to)> or vector<(from, to, weight)>
+  // edges is Vec<(from, to)> or Vec<(from, to, weight)>
   let mut edges = vec![];
   for i in 0 .. 100 {
     edges.push((i, i+100, x));
