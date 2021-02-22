@@ -6,12 +6,14 @@ fn dijkstra<C: PrimInt>(graph: &Vec<Vec<(usize, C)>>, start: usize) -> Vec<Optio
   dists[start] = Some(C::zero());
   let mut pq = BinaryHeap::new(); // (-dist, vertex)
   pq.push((C::zero(), start));
-  while let Some((c, u)) = pq.pop() {
+  while let Some((cr, u)) = pq.pop() {
+    let c = C::zero() - cr;
+    if dists[u].is_some() && dists[u].unwrap() != c { continue; }
     for &(v, d) in graph[u].iter() {
-      let d2 = C::zero() - c + d;
+      let d2 = c + d;
       if dists[v] == None || dists[v].unwrap() > d2 {
         dists[v] = Some(d2);
-        pq.push((c - d, v));
+        pq.push((cr - d, v));
       }
     }
   }
