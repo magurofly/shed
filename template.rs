@@ -19,6 +19,7 @@ use collections::*; // (BTree|Hash)(Set|Map), BinaryHeap, VecDeque, LinkedList
 use cmp::{self, Reverse}; // cmp::{min, max}
 use itertools::Itertools as _;
 use num_traits::*;
+use num_integer::*;
 use petgraph::prelude::*; // (Stable)?(Di|Un)?Graph, (Di|Un)?GraphMap, (Node|Edge)Index, Bfs, Dfs, DfsPostOrder
 use petgraph::unionfind::UnionFind;
 
