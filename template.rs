@@ -5,10 +5,10 @@ fn main() {
   input! {
   }
   
-  println!("");
+  println!("{}", );
 }
 
-type Int = usize;
+type Int = i64;
 const MOD: Int = 1_000_000_007;
 const INF: Int = 1_000_000_000;
 const YESNO: [&'static str; 2] = ["Yes", "No"];
@@ -25,11 +25,13 @@ use petgraph::unionfind::UnionFind;
 fn yes() { println!("{}", YESNO[0]); }
 fn no() { println!("{}", YESNO[1]); }
 fn yesno(c: bool) { println!("{}", if c { YESNO[0] } else { YESNO[1] }); }
+#[macro_export]
 macro_rules! min {
   ($a:expr $(,)*) => {{ $a }};
   ($a:expr, $b:expr $(,)*) => {{ cmp::min($a, $b) }};
   ($a:expr, $($rest:expr),+ $(,)*) => {{ cmp::min($a, min!($($rest),+)) }}
 }
+#[macro_export]
 macro_rules! max {
   ($a:expr $(,)*) => {{ $a }};
   ($a:expr, $b:expr $(,)*) => {{ cmp::max($a, $b) }};
@@ -38,12 +40,8 @@ macro_rules! max {
 
 trait MyItertools : Iterator {
   fn to_vec(self) -> Vec<Self::Item> where Self: Sized { self.collect::<Vec<_>>() }
-  fn to_iter(self) -> slice::Iter where Self: Sized { self.collect::<Vec<_>>().into_iter() }
-  fn tally(self) -> HashMap<Self::Item, usize> where Self: Sized, Self::Item: Copy + Eq + hash::Hash {
-    let mut counts = HashMap::new();
-    self.for_each(|item| *counts.entry(item).or_default() += 1 );
-    counts
-  }
+  fn to_vec_reversed(self) -> Vec<Self::Item> where Self: Sized { let mut v = self.collect::<Vec<_>>(); v.reverse(); v }
+  fn tally(self) -> HashMap<Self::Item, usize> where Self: Sized, Self::Item: Copy + Eq + hash::Hash { let mut counts = HashMap::new(); self.for_each(|item| *counts.entry(item).or_default() += 1 ); counts }
   fn cumprod<F: Fn(Self::Item, Self::Item) -> Self::Item>(self, init: Self::Item, f: F) -> CumProd<Self, Self::Item, F> where Self: Sized, Self::Item: Copy { CumProd { prod: init, f, iter: self } }
 }
 impl<T: ?Sized> MyItertools for T where T: Iterator {}
@@ -60,4 +58,12 @@ trait MyOrd : PartialOrd {
   fn chmax(&mut self, mut rhs: Self) -> &mut Self where Self: Sized { if self < &mut rhs { *self = rhs; }; self }
   fn chmin(&mut self, mut rhs: Self) -> &mut Self where Self: Sized { if self > &mut rhs { *self = rhs; }; self }
 }
-impl<T: ?Sized> MyOrd for T where T: PartialOrd {}
+impl<T: Sized + PartialOrd> MyOrd for T {}
+
+trait MyPrimInt : PrimInt {
+  fn mod_pow(self, mut e: Self, m: Self) -> Self { let (mut a, mut r) = (self, Self::one()); while e > Self::zero() { if e & Self::one() == Self::one() { r = r * a % m; } a = a * a % m; e = e >> 1; } r }
+  fn ceiling_div(self, other: Self) -> Self { (self + other - Self::one()) / other }
+  fn align_floor(self, unit: Self) -> Self { (self / unit) * unit }
+  fn align_ceil(self, unit: Self) -> Self { self.ceiling_div(unit) * unit }
+}
+impl<T: PrimInt> MyPrimInt for T {}
