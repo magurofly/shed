@@ -1,11 +1,10 @@
-#![allow(dead_code, unused_imports, unused_macros)]
+#![allow(dead_code, unused_imports, unused_macros, non_snake_case)]
 
 #[fastout]
 fn main() {
   input! {
   }
   
-  println!("{}", );
 }
 
 type Int = i64;
@@ -15,6 +14,7 @@ const YESNO: [&'static str; 2] = ["Yes", "No"];
 
 use proconio::{input, fastout, marker::{Chars, Bytes, Usize1}};
 use std::*;
+use std::ops::*;
 use collections::*; // (BTree|Hash)(Set|Map), BinaryHeap, VecDeque, LinkedList
 use cmp::{self, Reverse}; // cmp::{min, max}
 use itertools::Itertools as _;
@@ -68,3 +68,24 @@ trait MyPrimInt : PrimInt {
   fn align_ceil(self, unit: Self) -> Self { self.ceiling_div(unit) * unit }
 }
 impl<T: PrimInt> MyPrimInt for T {}
+
+#[derive(Clone, Copy)]
+struct ModInt<C>(C, C);
+impl<C: PrimInt> ModInt<C> {
+  fn new(value: C, modulo: C) -> Self { Self(value, modulo) }
+  fn to_int(&self) -> C { (self.0 + self.1) % self.1 }
+  fn pow<E: PrimInt>(self, mut exp: E) -> Self { let mut r = C::one(); let mut b = self.0; while !exp.is_zero() { if (exp & E::one()).is_one() { r = r * b % self.1; } b = b * b % self.1; exp = exp >> 1; } Self(r, self.1) }
+  fn inv(self) -> Self { self.pow(self.1 - C::one() - C::one()) }
+}
+impl<C: PrimInt + From<Int>> From<C> for ModInt<C> { fn from(value: C) -> Self { Self(value, From::from(MOD)) } }
+impl<C: PrimInt + fmt::Debug> fmt::Debug for ModInt<C> { fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "({:?} mod {:?})", self.0, self.1) } }
+impl<C: PrimInt + fmt::Display> fmt::Display for ModInt<C> { fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { self.to_int().fmt(f) } }
+impl<C: PrimInt + From<Int>> Num for ModInt<C> { type FromStrRadixErr = C::FromStrRadixErr; fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> { Ok(Self::from(C::from_str_radix(str, radix)?)) } }
+impl<C: PrimInt + From<Int>> PartialEq for ModInt<C> { fn eq(&self, other: &Self) -> bool { self.0.eq(&other.0) } }
+impl<C: PrimInt + From<Int>> Zero for ModInt<C> { fn zero() -> Self { Self::from(C::zero()) } fn is_zero(&self) -> bool { self.0.is_zero() } }
+impl<C: PrimInt + From<Int>> One for ModInt<C> { fn one() -> Self { Self::from(C::one()) } }
+impl<C: PrimInt + From<Int>> Add for ModInt<C> { type Output = Self; fn add(self, rhs: Self) -> Self { Self((self.0 + rhs.0) % self.1, self.1) } }
+impl<C: PrimInt + From<Int>> Sub for ModInt<C> { type Output = Self; fn sub(self, rhs: Self) -> Self { Self((self.0 - rhs.0) % self.1, self.1) } }
+impl<C: PrimInt + From<Int>> Mul for ModInt<C> { type Output = Self; fn mul(self, rhs: Self) -> Self { Self(self.0 * rhs.0 % self.1, self.1) } }
+impl<C: PrimInt + From<Int>> Div for ModInt<C> { type Output = Self; fn div(self, rhs: Self) -> Self { self * rhs.inv() } }
+impl<C: PrimInt + From<Int>> Rem for ModInt<C> { type Output = Self; fn rem(self, rhs: Self) -> Self { Self(self.0 % rhs.0, self.1) } }
