@@ -55,9 +55,11 @@ impl<I: Iterator<Item = P>, P: Copy, F: Fn(P, P) -> P> Iterator for CumProd<I, P
 }
 impl<I: Iterator<Item = P>, P: Copy, F: Fn(P, P) -> P> ExactSizeIterator for CumProd<I, P, F> {}
 
-trait MyOrd : PartialOrd {
-  fn chmax(&mut self, mut rhs: Self) -> &mut Self where Self: Sized { if self < &mut rhs { *self = rhs; }; self }
-  fn chmin(&mut self, mut rhs: Self) -> &mut Self where Self: Sized { if self > &mut rhs { *self = rhs; }; self }
+trait MyOrd : PartialOrd + Sized {
+  fn max(self, other: Self) -> Self { if &self < &other { other } else { self } }
+  fn min(self, other: Self) -> Self { if &self > &other { other } else { self } }
+  fn chmax(&mut self, mut rhs: Self) -> &mut Self { if self < &mut rhs { *self = rhs; }; self }
+  fn chmin(&mut self, mut rhs: Self) -> &mut Self { if self > &mut rhs { *self = rhs; }; self }
 }
 impl<T: Sized + PartialOrd> MyOrd for T {}
 
