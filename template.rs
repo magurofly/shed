@@ -26,6 +26,8 @@ use petgraph::unionfind::UnionFind;
 fn yes() { println!("{}", YESNO[0]); }
 fn no() { println!("{}", YESNO[1]); }
 fn yesno(c: bool) { println!("{}", if c { YESNO[0] } else { YESNO[1] }); }
+fn neighbor4<F: Fn(usize, usize)>(i: usize, j: usize, h: usize, w: usize, f: F) { if i > 0 { (f)(i - 1, j); } if i < h - 1 { (f)(i + 1, j); } if j > 0 { (f)(i, j - 1); } if j < w - 1 { (f)(i, j + 1); } }
+
 #[macro_export]
 macro_rules! min {
   ($a:expr $(,)*) => {{ $a }};
