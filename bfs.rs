@@ -1,11 +1,10 @@
-// つかいかた https://atcoder.jp/contests/abc184/submissions/20629427
-// 注意：かなり遅い
+// つかいかた https://atcoder.jp/contests/abc184/submissions/20630048
 struct BFS<P, C> {
-  dist: HashMap<P, C>,
+  dist: rustc_hash::FxHashMap<P, C>,
   queue: VecDeque<P>,
 }
 impl<P: Copy + cmp::Eq + hash::Hash, C: PrimInt> BFS<P, C> {
-  fn new() -> Self { Self { dist: HashMap::new(), queue: VecDeque::new() } }
+  fn new() -> Self { Self { dist: rustc_hash::FxHashMap::default(), queue: VecDeque::new() } }
   fn bfs<F: FnMut(P, C, &mut BFS<P, C>) -> bool>(start: P, mut f: F) -> Option<C> {
     let mut this = Self::new();
     this.dist.insert(start, C::zero());
