@@ -5,9 +5,11 @@ fn main() {
   input! {
   }
   
+  println!("{}", ans);
 }
 
 type Int = i64;
+type Mint = ModInt<Int>;
 const MOD: Int = 1_000_000_007;
 const INF: Int = 1_000_000_000;
 const YESNO: [&'static str; 2] = ["Yes", "No"];
@@ -17,7 +19,7 @@ use std::*;
 use std::ops::*;
 use collections::*; // (BTree|Hash)(Set|Map), BinaryHeap, VecDeque, LinkedList
 use cmp::{self, Reverse}; // cmp::{min, max}
-use itertools::Itertools as _;
+use itertools::*;
 use num_traits::*;
 use num_integer::*;
 use petgraph::prelude::*; // (Stable)?(Di|Un)?Graph, (Di|Un)?GraphMap, (Node|Edge)Index, Bfs, Dfs, DfsPostOrder
@@ -26,9 +28,7 @@ use petgraph::unionfind::UnionFind;
 fn yes() { println!("{}", YESNO[0]); }
 fn no() { println!("{}", YESNO[1]); }
 fn yesno(c: bool) { println!("{}", if c { YESNO[0] } else { YESNO[1] }); }
-fn neighbor4<F: FnOnce(usize, usize)>(i: usize, j: usize, h: usize, w: usize, f: F) { if i > 0 { (f)(i - 1, j); } if i < h - 1 { (f)(i + 1, j); } if j > 0 { (f)(i, j - 1); } if j < w - 1 { (f)(i, j + 1); } }
-
-#[macro_export]
+fn neighbor4<F: FnMut(usize, usize)>(i: usize, j: usize, h: usize, w: usize, mut f: F) { if i > 0 { (f)(i - 1, j); } if i < h - 1 { (f)(i + 1, j); } if j > 0 { (f)(i, j - 1); } if j < w - 1 { (f)(i, j + 1); } }#[macro_export]
 macro_rules! min {
   ($a:expr $(,)*) => {{ $a }};
   ($a:expr, $b:expr $(,)*) => {{ cmp::min($a, $b) }};
