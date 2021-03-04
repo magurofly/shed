@@ -49,7 +49,7 @@ fn spfa<C: PrimInt>(graph: &Vec<Vec<(usize, C)>>, start: usize) -> Option<Vec<Op
     let c = dists[u].unwrap();
     for &(v, d) in graph[u].iter() {
       let d2 = c + d;
-      if dists[v] == None || dists[v].unwrap() <= d2 { continue; }
+      if dists[v] != None && dists[v].unwrap() <= d2 { continue; }
       dists[v] = Some(d2);
       if in_queue[v] { continue; }
       count[v] += 1;
