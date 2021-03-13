@@ -1,3 +1,5 @@
+// template.rs と併せて使うこと前提
+
 // 線形篩により limit 以下の素数のリストと最小の素因数のテーブルを生成する O(limit)
 fn linear_sieve(limit: usize) -> (Vec<usize>, Vec<usize>) {
   let mut primes = vec![];
@@ -31,4 +33,19 @@ fn factorize(mut n: i64) -> Vec<i64> {
     factors.push(n);
   }
   factors
+}
+
+// 拡張ユークリッドの互除法
+fn ext_gcd<N: PrimInt>(a: N, b: N, x: &mut N, y: &mut N) -> N {
+  if b == N::zero() {
+    *x = N::one();
+    *y = N::zero();
+    return a;
+  }
+  let q = a / b;
+  let g = ext_gcd(b, a - q * b, x, y);
+  let z = *x - q * *y;
+  *x = *y;
+  *y = z;
+  g
 }
