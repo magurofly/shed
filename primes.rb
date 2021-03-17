@@ -29,3 +29,18 @@ def prime?(n)
   end
   true
 end
+
+# O(sqrt n) で約数列挙をする
+def factors(n)
+  Enumerator.new do |y|
+    k = 1
+    while k * k < n
+      if n % k == 0
+        y << k
+        y << n / k
+      end
+      k += 1
+    end
+    y << k if k * k == n
+  end
+end
