@@ -17,14 +17,14 @@ constexpr bool is_monoid(int iteration) {
 
 // 遅延セグ木に乗るかチェックする
 template<class S, S (*op)(S, S), S (*e)(), class F, S (*mapping)(F, S), F (*composition)(F, F), F (*id)(), S (*sample_s)(), F (*sample_f)()>
-constexpr bool lazysegable(int iteration) {
+constexpr bool is_lazysegable(int iteration) {
   if (!is_monoid<S, op, e>(iteration)) return false;
   if (!is_monoid<F, composition, id>(iteration)) return false;
   // 自己準同型チェック
   for (int i = 0; i < iteration; i++) {
     F f = sample_f();
     S x = sample_s(), y = sample_s();
-    if (f(op(x, y)) != op(f(x), f(y))) return false;
+    if (mapping(f, op(x, y)) != op(mapping(f, x), mapping(f, y))) return false;
   }
   return true;
 }
