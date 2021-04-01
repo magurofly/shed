@@ -5,7 +5,7 @@
 using namespace atcoder;
 ```
 
-## Range Add Range Sum
+## Range Affine Range Sum
 ```C++
 using S = pair<ll, int>; // (値, 区間の長さ)
 S op(S x, S y) {
@@ -15,16 +15,16 @@ S e() {
   return { 0, 0 };
 }
 
-using F = ll; // 足す値
+using F = pair<ll, ll>; // (掛ける値, 足す値)
 F composition(F f, F g) {
-  return (f + g);
+  return { (f.first * g.first), (f.second + f.first * g.second) };
 }
 F id() {
-  return 0;
+  return {1, 0};
 }
 
 S mapping(F f, S x) {
-  return { (x.first + f * x.second), x.second };
+  return { (f.first * x.first + f.second * x.second), x.second };
 }
 
 
