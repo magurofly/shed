@@ -30,3 +30,30 @@ S mapping(F f, S x) {
 
 lazy_segtree<S, op, e, F, mapping, composition, id> seg;
 ```
+
+## Range Update Range Min
+```C++
+using S = pair<ll, int>; // (値, 区間の長さ)
+S op(S x, S y) {
+  return { min(x.first, y.first), (x.second + y.second) };
+}
+S e() {
+  return { INF, 0 };
+}
+
+using F = ll; // 更新する値
+F composition(F f, F g) {
+  return (f == id() ? g : f);
+}
+F id() {
+  return -INF;
+}
+
+S mapping(F f, S x) {
+  if (f == id()) return x;
+  return { f, x.second };
+}
+
+
+lazy_segtree<S, op, e, F, mapping, composition, id> seg;
+```
