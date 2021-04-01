@@ -106,11 +106,25 @@ ll repeat(ll f, int n) {
 }
 ```
 
+### Range Xor
+
+```C++
+using S = pair<ll, int>; // (値, 区間の長さ)
+S op(S x, S y) {
+  return { (x.first ^ y.first), (x.second + y.second) };
+}
+S e() {
+  return { 0, 0 };
+}
+ll repeat(ll f, int n) {
+  return (f * (n & 1));
+}
+```
+
 ## 作用
 
 ### Range Add
 演算がSum, Min, Maxならそのまま使える。
-Xorのように、f(x + y) = f(x) + f(y)とならない場合は厳しい
 
 ```C++
 using F = ll; // 一律に足す値
