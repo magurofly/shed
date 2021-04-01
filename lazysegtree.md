@@ -57,3 +57,71 @@ S mapping(F f, S x) {
 
 lazy_segtree<S, op, e, F, mapping, composition, id> seg;
 ```
+
+# モジュール化（試験的）
+
+## 演算
+
+### Range Sum
+```C++
+using S = pair<ll, int>; // (値, 区間の長さ)
+S op(S x, S y) {
+  return { (x.first + y.first), (x.second + y.second) };
+}
+S e() {
+  return { 0, 0 };
+}
+ll repeat(ll f, int n) {
+  return (f * n);
+}
+```
+
+### Range Max
+
+```C++
+using S = pair<ll, int>; // (値, 区間の長さ)
+S op(S x, S y) {
+  return { max(x.first, y.first), (x.second + y.second) };
+}
+S e() {
+  return { -INF, 0 };
+}
+ll repeat(ll f, int n) {
+  return f;
+}
+```
+
+### Range Min
+
+```C++
+using S = pair<ll, int>; // (値, 区間の長さ)
+S op(S x, S y) {
+  return { min(x.first, y.first), (x.second + y.second) };
+}
+S e() {
+  return { INF, 0 };
+}
+ll repeat(ll f, int n) {
+  return f;
+}
+```
+
+## 作用
+
+### Range Add
+演算がSum, Min, Maxならそのまま使える。
+Xorのように、f(x + y) = f(x) + f(y)とならない場合は厳しい
+
+```C++
+using F = ll; // 一律に足す値
+F composition(F f, F g) {
+  return f + g;
+}
+F id() {
+  return 0;
+}
+
+S mapping(F f, S x) {
+  return { op(x.first, repeat(f, x.second)), x.second };
+}
+```
