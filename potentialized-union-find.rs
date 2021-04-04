@@ -5,14 +5,15 @@ fn main() {
     println!("is_same(1, 2) = {}", uf.is_same(1, 2));
     println!("size(2) = {}", uf.size(2));
     println!("potential(2) = {}", uf.potential(2));
-    println!("union(1, 2, 3)"); uf.union(1, 2, 3);
+    println!("union(1, 2, 3)"); uf.union(1, 2, 1);
     println!("potential(1) = {}", uf.potential(1));
     println!("potential(2) = {}", uf.potential(2));
-    println!("union(0, 1, -1)"); uf.union(0, 1, -1);
+    println!("union(0, 1, -1)"); uf.union(0, 1, 1);
     println!("potential(0) = {}", uf.potential(0));
     println!("potential(1) = {}", uf.potential(1));
     println!("potential(2) = {}", uf.potential(2));
     println!("distance(0, 2) = {}", uf.distance(0, 2));
+    
 }
 
 // 重みつきUnionFind
@@ -87,8 +88,9 @@ impl<T: Clone, Op: Fn(T, T) -> T, Id: Fn() -> T, Inv: Fn(T) -> T> PotentializedU
             d = (self.inverse)(d);
             std::mem::swap(&mut u, &mut v);
         }
+        d = (self.operation)((self.operation)(tree[u].value.clone(), d), (self.inverse)(tree[v].value.clone()));
         tree[u].size += tree[v].size;
         tree[v].parent = u;
-        tree[v].value = (self.operation)((self.operation)(tree[u].value.clone(), d), (self.inverse)(tree[v].value.clone()));
+        tree[v].value = d;
     }
 }
