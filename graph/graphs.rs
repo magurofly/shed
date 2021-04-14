@@ -37,6 +37,20 @@ pub mod graphs {
       }
       self
     }
+    fn if_chmin<F: FnOnce()>(&mut self, other: Self, procedure: F) -> &mut Self {
+      if *self > other {
+        *self = other;
+        (procedure)();
+      }
+      self
+    }
+    fn if_chmax<F: FnOnce()>(&mut self, other: Self, procedure: F) -> &mut Self {
+      if *self < other {
+        *self = other;
+        (procedure)();
+      }
+      self
+    }
   }
   pub trait MeasureSigned: Measure + Signed {}
 
@@ -200,9 +214,7 @@ pub mod graphs {
         if dist[u] != Some(d) { continue; }
         for edge in self.vertices[u].edges.iter().map(|&e| self.edge(e) ) {
           if let Some(cost) = (cost_by)(edge) {
-            if dist[edge.to].map(|x| x <= d + cost ).unwrap_or(false) { continue; }
-            dist[edge.to] = Some(d + cost);
-            pq.push((Reverse(d + cost), edge.to));
+            dist[edge.to].if_chmin(d + cost, || pq.push((Reverse(d + cost), edge.to)));
           }
         }
       }
@@ -211,10 +223,10 @@ pub mod graphs {
 
     pub fn floyd_warshall<T, F: FnMut(&Edge<E>) -> Option<T>>(&self, make_loop: bool, mut cost_by: F) -> Vec<Vec<Option<T>>> where T: Measure {
       let vertices = self.vertices.len();
-      let mut dist: Vec<Vec<Option<T>>> = vec![vec![None; vertices]; vertices];
+      let mut dist = vec![vec![None as Option<T>; vertices]; vertices];
       for edge in &self.edges {
-        if let Some((d, cost)) = zip(dist[edge.from][edge.to].as_mut(), (cost_by)(edge)) {
-          d.chmin(cost);
+        if let Some(cost) = (cost_by)(edge) {
+          dist[edge.from][edge.to].chmin(cost);
         }
       }
       if make_loop {
@@ -226,11 +238,7 @@ pub mod graphs {
         for i in 0 .. vertices {
           for j in 0 .. vertices {
             if let Some((d1, d2)) = zip(dist[i][k], dist[k][j]) {
-              if let Some(d) = dist[i][j].as_mut() {
-                d.chmin(d1 + d2);
-              } else {
-                dist[i][j] = Some(d1 + d2);
-              }
+              dist[i][j].chmin(d1 + d2);
             }
           }
         }
@@ -359,6 +367,51 @@ pub mod graphs {
   }
 
   // impls
+
+  pub trait OptionUtil<T>: Sized {
+    fn unwrap(self) -> T;
+    fn is_some(&self) -> bool;
+    fn insert(&mut self, value: T) -> &mut T;
+    fn chmin(&mut self, other: T) -> &mut Self where Self: Clone, T: Clone + Ord {
+      let value = if self.is_some() { self.clone().unwrap().min(other) } else { other };
+      self.insert(value);
+      self
+    }
+    fn chmax(&mut self, other: T) -> &mut Self where Self: Clone, T: Clone + Ord {
+      let value = if self.is_some() { self.clone().unwrap().max(other) } else { other };
+      self.insert(value);
+      self
+    }
+    fn and_if<F: FnOnce(T) -> bool>(self, predicate: F) -> bool {
+      self.is_some() && predicate(self.unwrap())
+    }
+    fn if_chmin<F: FnOnce()>(&mut self, other: T, procedure: F) -> &mut Self where Self: Clone, T: Clone + Ord {
+      if !self.is_some() || self.clone().unwrap() > other {
+        self.insert(other);
+        procedure();
+      }
+      self
+    }
+    fn if_chmax<F: FnOnce()>(&mut self, other: T, procedure: F) -> &mut Self where Self: Clone, T: Clone + Ord {
+      if !self.is_some() || self.clone().unwrap() < other {
+        self.insert(other);
+        procedure();
+      }
+      self
+    }
+  }
+  impl<T> OptionUtil<T> for Option<T> {
+    fn unwrap(self) -> T {
+      Option::<T>::unwrap(self)
+    }
+    fn is_some(&self) -> bool {
+      Option::<T>::is_some(self)
+    }
+    fn insert(&mut self, value: T) -> &mut T {
+      *self = Some(value);
+      self.as_mut().unwrap()
+    }
+  }
 
   impl<T: Sized + std::ops::AddAssign + std::ops::SubAssign + std::ops::MulAssign + std::ops::DivAssign + std::ops::RemAssign> AssignOps for T {}
   impl<T: std::fmt::Debug + Copy + Ord + Default + Num + AssignOps + std::iter::Sum> Measure for T {}
