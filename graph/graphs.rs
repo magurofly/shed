@@ -6,8 +6,9 @@ fn main() {
   let edges = vec![(0, 1, 3), (0, 2, 3), (1, 2, 2), (1, 3, 1), (2, 3, 3), (2, 4, 2), (3, 4, 2)];
   println!("{:?}", &edges);
   graph.add_edges(edges);
-  let flow = graph.maxflow_push_relabel(0, 4);
-  println!("{}", flow);
+  println!("{:?}", graph.shortest_path_bfs::<usize>(4));
+  // let flow = graph.maxflow_push_relabel(0, 4);
+  // println!("{}", flow);
 }
 
 // use proconio::{input, fastout, marker::Usize1};
@@ -54,14 +55,14 @@ pub mod graphs {
   }
   pub trait MeasureSigned: Measure + Signed {}
 
-  #[derive(Debug, Default)]
+  #[derive(Debug, Default, Clone)]
   pub struct Vertex<V> {
     id: usize,
     weight: V,
     edges: Vec<usize>,
   }
 
-  #[derive(Debug, Default)]
+  #[derive(Debug, Default, Clone)]
   pub struct Edge<E> {
     id: usize,
     weight: E,
@@ -73,6 +74,7 @@ pub mod graphs {
   pub trait EdgeType<E, D> {
     fn add_edge<V>(graph: &mut VecGraph<V, E, D>, from: usize, to: usize, weight: E) -> usize;
   }
+  /// 有向グラフ
   #[derive(Debug)]
   pub enum Directed {}
   impl<E> EdgeType<E, Directed> for Directed {
@@ -84,6 +86,7 @@ pub mod graphs {
       id
     }
   }
+  /// 無向グラフ
   #[derive(Debug)]
   pub enum Undirected {}
   impl<E: Clone> EdgeType<E, Undirected> for Undirected {
@@ -97,6 +100,7 @@ pub mod graphs {
       id
     }
   }
+  /// 最大フロー（残余グラフ）
   #[derive(Debug)]
   pub enum MaxFlow {}
   impl<Flow: Measure> EdgeType<Flow, MaxFlow> for MaxFlow {
@@ -122,10 +126,14 @@ pub mod graphs {
     fn into_edge(self) -> (usize, usize, E);
   }
 
+  /// グラフのトレイト
+  /// メソッドが非常に少ないため、 `VecGraph` からこちらにメソッドを移す予定
   pub trait Graph<V, E> {
     fn vertex(&self, id: usize) -> &Vertex<V>;
     fn edge(&self, id: usize) -> &Edge<E>;
   }
+
+  // TODO: GraphMut 構造体を作成する
 
   #[derive(Debug, Default)]
   pub struct VecGraph<V = (), E = (), D = Directed> {
@@ -145,6 +153,7 @@ pub mod graphs {
     }
   }
   impl<V, E, D: EdgeType<E, D>> VecGraph<V, E, D> {
+    /// 空のグラフを生成する
     pub fn new() -> Self {
       Self {
         edge_type: PhantomData,
@@ -153,6 +162,7 @@ pub mod graphs {
       }
     }
 
+    /// 重みのリスト、もしくは頂点の個数からグラフを生成する
     pub fn with_vertices<I: Iterator<Item = V>, Vs: IntoVertices<V, I>>(vertices: Vs) -> Self {
       Self {
         edge_type: PhantomData,
@@ -167,8 +177,21 @@ pub mod graphs {
       id
     }
 
+    /// 頂点の重みのリストまたは頂点数によって頂点を追加し、頂点番号のリストを返す
     pub fn add_vertices<I: Iterator<Item = V>, Vs: IntoVertices<V, I>>(&mut self, vertices: Vs) -> Vec<usize> {
       vertices.into_vertices().map(|v| self.add_vertex(v) ).collect::<Vec<_>>()
+    }
+
+    /// 辺の向きを全て反転したグラフ
+    pub fn reversed(&self) -> Self where V: Clone, E: Clone {
+      let mut graph = Self::new();
+      for vertex in &self.vertices {
+        graph.add_vertex(vertex.weight.clone());
+      }
+      for edge in &self.edges {
+        graph.add_edge(edge.to, edge.from, edge.weight.clone());
+      }
+      graph
     }
 
     pub fn connect(&mut self, from: usize, to: usize) -> usize where E: Clone + Default {
@@ -179,6 +202,8 @@ pub mod graphs {
       D::add_edge(self, from, to, weight)
     }
 
+    /// 辺のリストによって辺を追加する
+    /// 要素は `(from, to, weight)` または `(from, to)` となっている必要がある
     pub fn add_edges<I: IntoIterator>(&mut self, edges: I) where E:Clone, I::Item: IntoEdge<E> {
       for edge in edges {
         let (from, to, weight) = edge.into_edge();
@@ -196,15 +221,19 @@ pub mod graphs {
       &mut self.edges[id]
     }
 
+    /// 頂点から出ている辺のリストを返す
     pub fn edges_from(&self, from: usize) -> Vec<usize> {
       self.vertex(from).edges.iter().copied().collect::<Vec<_>>()
     }
 
+    /// 隣接する頂点のリストを返す
     pub fn adjacent_vertices(&self, from: usize) -> Vec<usize> {
       self.vertex(from).edges.iter().map(|&e| self.edge(e).to ).collect::<Vec<_>>()
     }
 
-    pub fn dijkstra<T, F: FnMut(&Edge<E>) -> Option<T>>(&self, from: usize, mut cost_by: F) -> Vec<Option<T>> where T: Measure {
+    /// 最短経路を求める
+    /// 負辺がある場合は使えない
+    pub fn shortest_path_dijkstra<T, F: FnMut(&Edge<E>) -> Option<T>>(&self, from: usize, mut cost_by: F) -> Vec<Option<T>> where T: Measure {
       assert!(from < self.vertices.len());
       let mut dist = vec![None; self.vertices.len()];
       dist[from] = Some(T::zero());
@@ -221,7 +250,8 @@ pub mod graphs {
       dist
     }
 
-    pub fn floyd_warshall<T, F: FnMut(&Edge<E>) -> Option<T>>(&self, make_loop: bool, mut cost_by: F) -> Vec<Vec<Option<T>>> where T: Measure {
+    /// 全点対最短経路を求める
+    pub fn shortest_paths_floyd_warshall<T, F: FnMut(&Edge<E>) -> Option<T>>(&self, make_loop: bool, mut cost_by: F) -> Vec<Vec<Option<T>>> where T: Measure {
       let vertices = self.vertices.len();
       let mut dist = vec![vec![None as Option<T>; vertices]; vertices];
       for edge in &self.edges {
@@ -248,10 +278,7 @@ pub mod graphs {
 
     // pub fn spfa<T, F: FnMut(&Edge<E>) -> Option<T>>(&self, from: usize, mut cost_by: F) -> Vec<Result<T, Status>>
 
-    // Generic Push/Relabel + Global Relabeling + FIFO
-    // @param s source
-    // @param t sink
-    // @return flow
+    /// 最大フローを求める (Generic Push/Relabel + Global Relabeling + FIFO)
     pub fn maxflow_push_relabel<'a>(&'a mut self, s: usize, t: usize) -> E where E: Measure {
       struct State<'b, V, E, D> {
         graph: &'b mut VecGraph<V, E, D>,
@@ -273,7 +300,7 @@ pub mod graphs {
         }
 
         fn relabel_global(&mut self) {
-          for (v, d) in self.graph.bfs(self.sink).into_iter().enumerate() {
+          for (v, d) in self.graph.shortest_path_bfs(self.sink).into_iter().enumerate() {
             self.label[v] = d.unwrap_or(0);
           }
           self.label[self.source] = self.graph.vertices.len();
@@ -325,44 +352,100 @@ pub mod graphs {
       state.excess[t]
     }
 
-    pub fn bfs<T: Measure>(&self, from: usize) -> Vec<Option<T>> {
-      self.bfs_by(from, |bfs, u| {
-        for v in self.adjacent_vertices(u) {
-          bfs.go_next(v);
-        }
-      })
+    /// BFSで最短パスを求める
+    pub fn shortest_path_bfs<T: Measure>(&self, from: usize) -> Vec<Option<T>> {
+      let mut dist = vec![None; self.vertices.len()];
+      dist[from] = Some(T::zero());
+      self.bfs(from, |e| {
+        let edge = self.edge(e);
+        dist[edge.to] = dist[edge.from].map(|d| d + T::one() );
+      });
+      dist
     }
 
-    pub fn bfs_by<T: Measure, F: FnMut(&mut Bfs<T>, usize)>(&self, from: usize, mut transport: F) -> Vec<Option<T>> {
-      let mut bfs = Bfs { current: from, dist: vec![None; self.vertices.len()], queue: VecDeque::new() };
-      bfs.dist[from] = Some(T::zero());
-      bfs.queue.push_back(from);
-      while let Some(u) = bfs.queue.pop_back() {
-        bfs.current = u;
-        (transport)(&mut bfs, u);
-      }
-      bfs.dist
+    /// BFSする
+    pub fn bfs<F: FnMut(usize)>(&self, from: usize, mut f: F) {
+      self.walk(from, |walk, u| {
+        for &e in &self.vertex(u).edges {
+          if walk.go_next(self.edge(e).to) {
+            (f)(e);
+          }
+        }
+      });
     }
+
+    /// DFSする
+    pub fn dfs<F: FnMut(usize)>(&self, from: usize, mut f: F) {
+      self.walk(from, |walk, u| {
+        for &e in &self.vertex(u).edges {
+          if walk.go_later(self.edge(e).to) {
+            (f)(e);
+          }
+        }
+      });
+    }
+
+    /// グラフ上の探索
+    /// 01BFSなどに使える
+    pub fn walk<F: FnMut(&mut Walk, usize)>(&self, from: usize, mut transport: F) {
+      let mut walk = Walk { visited: vec![false; self.vertices.len()], queue: VecDeque::new() };
+      walk.go_next(from);
+      while let Some(u) = walk.next() {
+        (transport)(&mut walk, u);
+      }
+    }
+
+    // /// BFS木上のLCA
+    // pub fn lca(&self, root: usize) -> Lca {
+    //   let k = self.vertices.len().saturating_sub(1).next_power_of_two().trailing_zeros();
+    //   let mut parent = vec![vec![None; self.vertices.len()]; k];
+    //   let mut dist = vec![None; self.vertices.len()];
+    //   dist[root] = Some(0);
+    //   self.bfs(root, |e| {
+    //     let edge = self.edge(e);
+    //     parent[0][edge.to] = edge.from;
+    //     dist[edge.to] = dist[edge.from].map(|d| d + 1 );
+    //   });
+    //   let mut ancestor = vec![vec![]; self.vertices.len()];
+    //   Lca { ancestor, depth }
+    // }
   }
 
-  pub struct Bfs<T> {
-    current: usize,
-    dist: Vec<Option<T>>,
+  pub struct Walk {
+    visited: Vec<bool>,
     queue: VecDeque<usize>,
   }
-  impl<T: Measure> Bfs<T> {
+  impl Walk {
     // BFS
-    pub fn go_next(&mut self, v: usize) {
-      if self.dist[v].is_some() { return; }
-      self.dist[v] = self.dist[self.current].map(|x| x + T::one() );
+    pub fn go_next(&mut self, v: usize) -> bool {
+      if self.visited[v] { return false; }
+      self.visited[v] = true;
       self.queue.push_front(v);
+      true
     }
 
     // DFS
-    pub fn go_last(&mut self, v: usize) {
-      if self.dist[v].is_some() { return; }
-      self.dist[v] = self.dist[self.current].map(|x| x + T::one() );
+    pub fn go_later(&mut self, v: usize) -> bool {
+      if self.visited[v] { return false; }
+      self.visited[v] = true;
       self.queue.push_back(v);
+      true
+    }
+
+    pub fn unvisit(&mut self, v: usize) {
+      self.visited[v] = false;
+    }
+
+    pub fn next(&mut self) -> Option<usize> {
+      self.queue.pop_back()
+    }
+  }
+
+  pub struct Lca {
+  }
+  impl Lca {
+    pub fn query(u: usize, v: usize) -> usize {
+      0
     }
   }
 
