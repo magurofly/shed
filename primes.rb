@@ -1,14 +1,23 @@
 # 複数の素数を求めるような問題に高速に答えられる
-class SPFPrime
-	def initialize(max)
-		@spf = (0..max).to_a
-		sqmax = Math.sqrt(max).ceil
-		4.step(sqmax, 2) { |i| @spf[i] = 2 }
-		3.step(sqmax, 2) { |i| (i*i).step(max, i) { |j| @spf[j] = i if @spf[j] == j } if @spf[i] == i }
+class PrimeTable
+	def initialize(n)
+		@lpf = [nil] * (n + 1)
+		@primes = [2]
+		(2 .. n).step(2) do |d| @lpf[d] = 2 end
+		(3 .. n).step(2) do |d|
+			unless @lpf[d]
+				@lpf[d] = d
+				@primes << d
+			end
+			@primes.each do |p|
+				break if p * d > n or p > @lpf[d]
+				@lpf[p * d] = p
+			end
+		end
 	end
-	def prime?(n); @spf[n] == n; end
-	def each; (2..max).each { |i| yield i if @spf[i] == i }; end
-	def factorize(n); fs = []; while n > 1; f = @spf[n]; fs << f; n /= f; end; fs; end
+	def prime?(n); @lpf[n] == n; end
+	def each(&block); @primes.each(&block); end
+	def factorize(n); fs = []; while n > 1; fs << (f = @lpf[n]); n /= f; end; fs; end
 end
 
 # O(log n) で素数判定をする ただし n＜2^64
