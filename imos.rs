@@ -1,3 +1,4 @@
+// Verified: https://atcoder.jp/contests/abc005/submissions/22129384
 struct Imos2D<T, A, S> {
   n: usize, m: usize,
   imos: Vec<Vec<T>>,
