@@ -1,3 +1,11 @@
+fn main() {
+  let mat = Matrix::new(vec![
+    vec![0, 1],
+    vec![1, 1],
+  ]);
+  println!("{:?}", mat.pow(8));
+}
+
 #[derive(Clone, Debug)]
 struct Matrix<'a, T: Clone> {
   n: usize, m: usize,
@@ -23,6 +31,11 @@ impl<T: Clone> Matrix<'_, T> {
   fn at(&self, i: usize, j: usize) -> T {
     assert!(i < self.n && j < self.m);
     self.rows[i][j].clone()
+  }
+
+  fn at_mut(&mut self, i: usize, j: usize) -> &mut T {
+    assert!(i < self.n && j < self.m);
+    &mut self.rows.to_mut()[i][j]
   }
 
   fn pow(&self, mut e: usize) -> Self where T: Clone + std::ops::Add + std::ops::Mul + num_traits::Zero + num_traits::One {
