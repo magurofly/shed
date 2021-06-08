@@ -14,14 +14,16 @@ class Deque {
   
   pop_front() {
     if (!this.head.length) {
-      while (this.tail.length) this.head.push(this.tail.pop());
+      this.head = this.tail.reverse();
+      this.tail = [];
     }
     return this.head.pop();
   }
   
   pop_back() {
     if (!this.tail.length) {
-      while (this.head.length) this.tail.push(this.head.pop());
+      this.tail = this.head.reverse();
+      this.head = [];
     }
     return this.tail.pop();
   }
