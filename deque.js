@@ -4,12 +4,12 @@ class Deque {
     this.tail = [];
   }
   
-  push_front(x) {
-    this.head.push(x);
+  push_front(...xs) {
+    this.head.push(...xs);
   }
   
-  push_back(x) {
-    this.tail.push(x);
+  push_back(...xs) {
+    this.tail.push(...xs);
   }
   
   pop_front() {
