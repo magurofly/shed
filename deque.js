@@ -4,26 +4,30 @@ class Deque {
     this.tail = [];
   }
   
-  push_front(...xs) {
-    this.head.push(...xs);
+  push_front(x) {
+    this.head.push(x);
   }
   
-  push_back(...xs) {
-    this.tail.push(...xs);
+  push_back(x) {
+    this.tail.push(x);
   }
   
   pop_front() {
     if (!this.head.length) {
+      const tail = this.head;
+      tail.length = 0;
       this.head = this.tail.reverse();
-      this.tail = [];
+      this.tail = tail;
     }
     return this.head.pop();
   }
   
   pop_back() {
     if (!this.tail.length) {
+      const head = this.tail;
+      head.length = 0;
       this.tail = this.head.reverse();
-      this.head = [];
+      this.head = head;
     }
     return this.tail.pop();
   }
