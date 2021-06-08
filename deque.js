@@ -3,6 +3,10 @@ class Deque {
     this.head = [];
     this.tail = [];
   }
+
+  get length() {
+    return this.head.length + this.tail.length;
+  }
   
   push_front(x) {
     this.head.push(x);
