@@ -1,4 +1,5 @@
-// AtCoder のプロフィールページを取得して大まかなデータを JSON データで返す
+// AtCoder のプロフィールページを取得して大まかなデータを返す
+// @return { country, birthYear, twitter, topcoder, codeforces, affiliation, rank, rating, highest, count, last }
 async function fetchAtCoderProfile(user) {
   const text = await fetch(`https://atcoder.jp/users/${user}?lang=en`).then(res => res.text());
   const doc = new DOMParser().parseFromString(text, "text/html");
