@@ -16,3 +16,9 @@ def is_clockwise(pos)
   (0 ... pos.size).sum { |i| pos[i - 1][0] * pos[i][1] - pos[i][0] * pos[i - 1][1] } < 0
 end
 ```
+
+# 2 点を通る直線と点の距離
+
+点 `p1`, `p2` を通る直線と点 `q` の距離を求める
+
+- $ \frac { |(p_2 - p_1) \times (q - p_1)| } { | p_2 - p_1 | } $
