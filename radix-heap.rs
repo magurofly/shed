@@ -1,22 +1,30 @@
 #[derive(Debug, Clone)]
 /// 基数ヒープ（昇順）
-pub struct RadixHeapUsize {
-  v: Vec<Vec<usize>>,
+pub struct RadixHeap<T> {
+  v: Vec<Vec<(usize, T)>>,
   last: usize,
   size: usize,
 }
-impl RadixHeapUsize {
+impl<T> RadixHeap<T> {
   pub fn new() -> Self {
-    Self { v: vec![vec![]; 0usize.leading_zeros() as usize + 1], last: 0, size: 0 }
+    let mut v = vec![];
+    for _ in 0 ..= 0usize.leading_zeros() {
+      v.push(vec![]);
+    }
+    Self { v, last: 0, size: 0 }
   }
 
-  pub fn push(&mut self, x: usize) {
-    assert!(self.last <= x);
+  pub fn is_empty(&self) -> bool {
+    self.size == 0
+  }
+
+  pub fn push(&mut self, key: usize, value: T) {
+    assert!(self.last <= key);
     self.size += 1;
-    self.v[Self::bsr(x ^ self.last)].push(x);
+    self.v[Self::bsr(key ^ self.last)].push((key, value));
   }
 
-  pub fn pop(&mut self) -> Option<usize> {
+  pub fn pop(&mut self) -> Option<(usize, T)> {
     if self.size == 0 {
       return None;
     }
@@ -25,19 +33,17 @@ impl RadixHeapUsize {
       while self.v[i].is_empty() {
         i += 1;
       }
-      let new_last = *self.v[i].iter().min().unwrap();
+      let new_last = self.v[i].iter().map(|x| x.0).min().unwrap();
       unsafe {
-        let v = &mut self.v as *mut Vec<Vec<usize>>;
-        for &x in (& *v)[i].iter() {
-          (&mut *v)[Self::bsr(x ^ new_last)].push(x);
+        let v = &mut self.v as *mut Vec<Vec<(usize, T)>>;
+        for pair in (&mut *v)[i].drain(..) {
+          (&mut *v)[Self::bsr(pair.0 ^ new_last)].push(pair);
         }
       }
       self.last = new_last;
-      self.v[i].clear();
     }
     self.size -= 1;
-    self.v[0].pop();
-    Some(self.last)
+    self.v[0].pop()
   }
 
   fn bsr(x: usize) -> usize {
