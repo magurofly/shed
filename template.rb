@@ -1,7 +1,6 @@
-def main
-
+main = -> {
   
-end
+}
 
 DEBUG = true
 MOD = 10**9+7
@@ -81,4 +80,4 @@ module Enumerable
   def cumsum; ys = [0]; each { |x| ys << x + ys[-1] }; ys end
 end
 
-main
+main[]
