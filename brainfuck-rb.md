@@ -181,7 +181,7 @@ class Brainfuck
   end
   
   # ptr += n
-  def move(n)
+  def shift(n)
     if n > 0
       right n
     elsif n < 0
@@ -203,14 +203,14 @@ class Brainfuck
   # ptr += 1; n.times { yield }; ptr -= 1
   # assert mem[ptr+shift] == 0
   def times(n = 1, shift = 1)
-    move shift
+    shift shift
     add(n, shift)
     repeat do
-      move -shift
+      shift -shift
       yield
-      move shift
+      shift shift
     end
-    move -shift
+    shift -shift
 
     return
   end
@@ -239,9 +239,9 @@ class Brainfuck
 
   # print mem[ptr] if mem[ptr] < 10
   def putdigit
-    sub ?0.ord
-    putchar
     add ?0.ord
+    putchar
+    sub ?0.ord
   end
 end
 
