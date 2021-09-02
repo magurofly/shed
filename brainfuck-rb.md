@@ -20,30 +20,51 @@
 
 # ユーティリティ
 
-## `add(n, shift=1)`
+## 計算
+
+### `zero`
+`mem[ptr] = 0`
+
+### `add(n, shift=1)`
 `mem[ptr] += n`
 
 作業領域として`mem[ptr + shift]`を使う
 
-## `sub(n, shift=1)`
+### `sub(n, shift=1)`
 `mem[ptr] += n`
 
 作業領域として`mem[ptr + shift]`を使う
 
-## `move(n)`
+## メモリ
+
+### `shift(n)`
 `ptr += n`
 
-`n`が負なら左に移動する
+`n`が正なら右に、負なら左に移動する
 
-## `repeat { ... }`
+### `move(shift)`
+`mem[ptr], mem[ptr+shift] = 0, mem[ptr]`
+
+### `copy(shift)`
+`mem[ptr+shift] = mem[ptr]`
+
+作業領域として`mem[ptr + shift * 2]`を使う
+
+## 制御
+
+### `while_positive { ... }`
+`while mem[ptr] > 0; ...; end`
+
+### `repeat { ... }`
 `while mem[ptr] > 0; mem[ptr] -= 1; ...; end`
 
 `...`は`bf.add`など
 
-## `times(n, shift=1) { ... }`
+### `times(n, shift=1) { ... }`
 `...`を`n`回実行する
 
 作業領域として`mem[ptr+shift]`を使う
+
 
 ## 入力
 
@@ -63,8 +84,7 @@
 
 `mem[ptr] >= 10`だと壊れる
 
-# コード
-```ruby:bf.rb
+```ruby
 class Brainfuck
 
   attr_accessor :program
@@ -104,6 +124,15 @@ class Brainfuck
 
   # 以下、util
 
+  # -- 計算 --
+
+  # mem[ptr] = 0
+  def zero
+    @program << "[-]"
+
+    return
+  end
+
   # mem[ptr] += n
   # assert mem[ptr+shift*x] == 0
   def add(n = 1, shift = 1)
@@ -113,17 +142,17 @@ class Brainfuck
       return
     end
 
-    if n >= 64
+    if n >= 25
       right shift
-      add 8 * (n / 64), shift
+      add 5 * (n / 25), shift
       while_positive do
         sub 1
         left shift
-        add 8
+        add 5
         right shift
       end
       left shift
-      n %= 64
+      n %= 25
     end
     
     @program << ?+ * n
@@ -157,6 +186,19 @@ class Brainfuck
     return
   end
 
+  # -- メモリ --
+  
+  # ptr += n
+  def shift(n)
+    if n > 0
+      right n
+    elsif n < 0
+      left -n
+    end
+
+    return
+  end
+
   # ptr -= n
   def left(n = 1)
     @program << ?< * n
@@ -171,22 +213,37 @@ class Brainfuck
     return
   end
 
+  # mem[ptr], mem[ptr + shift] = 0, mem[ptr]
+  def move(sh = 1)
+    repeat do
+      shift sh
+      add 1
+      shift -sh
+    end
+  end
+
+  # mem[ptr + shift] = mem[ptr]
+  # assert mem[ptr + shift * 2] == 0
+  def copy(sh = 1)
+    repeat do
+      shift sh
+      add 1
+      shift sh
+      add 1
+      shift -sh * 2
+    end
+    shift sh * 2
+    move -sh * 2
+    shift -sh * 2
+  end
+
+  # -- 制御 --
+
   # yield while mem[ptr] != 0
   def while_positive
     @program << ?[
     yield
     @program << ?]
-
-    return
-  end
-  
-  # ptr += n
-  def shift(n)
-    if n > 0
-      right n
-    elsif n < 0
-      left -n
-    end
 
     return
   end
@@ -215,7 +272,7 @@ class Brainfuck
     return
   end
 
-  # -- 入出力関係 --
+  # -- 入力 --
 
   # mem[ptr, n] = read(n).each_char.map(&:ord)
   def getchar(n = 1)
@@ -224,17 +281,19 @@ class Brainfuck
     return
   end
 
+  # mem[ptr] = read(1).to_i
+  def getdigit
+    getchar
+    sub ?0.ord
+  end
+
+  # -- 出力 --
+
   # print mem[ptr, n].map(&:chr).join
   def putchar(n = 1)
     @program << ?. + ">." * (n - 1)
 
     return
-  end
-
-  # mem[ptr] = read(1).to_i
-  def getdigit
-    getchar
-    sub ?0.ord
   end
 
   # print mem[ptr] if mem[ptr] < 10
