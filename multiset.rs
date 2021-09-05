@@ -8,6 +8,8 @@ impl<E: Ord> BTreeMultiset<E> {
 	pub fn remove(&mut self, item: &E) { if let Some(v) = self.0.get_mut(item) { if *v <= 1 { self.0.remove(item); } else { *v -= 1; } } }
 	pub fn min(&self) -> Option<&E> { self.0.keys().next() }
 	pub fn max(&self) -> Option<&E> { self.0.keys().next_back() }
+	pub fn lower_bound(&self, min: E) -> Option<&E> { self.0.range(min ..).next() }
+	pub fn upper_bound(&self, min: E) -> Option<&E> { use std::ops::Bound::*; self.0.range((Excluded(min), Unbounded)).next() }
 }
 
 #[derive(Clone, Debug)]
