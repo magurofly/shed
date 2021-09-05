@@ -9,12 +9,13 @@ impl<E: Ord> BTreeMultiset<E> {
 	pub fn min(&self) -> Option<&E> { self.0.keys().next() }
 	pub fn max(&self) -> Option<&E> { self.0.keys().next_back() }
 	pub fn lower_bound(&self, min: E) -> Option<&E> { self.0.range(min ..).next() }
-	pub fn upper_bound(&self, min: E) -> Option<&E> { use std::ops::Bound::*; self.0.range((Excluded(min), Unbounded)).next() }
+	pub fn lower_bound(&self, min: E) -> Option<&E> { self.0.range(min ..).next().map(|e| e.0) }
+	pub fn upper_bound(&self, min: E) -> Option<&E> { use std::ops::Bound::*; self.0.range((Excluded(min), Unbounded)).next().map(|e| e.0) }
 }
 
 #[derive(Clone, Debug)]
 pub struct HashMultiset<E>(std::collections::HashMap<E, usize>);
-impl<E: Eq + Hash> BTreeMultiset<E> {
+impl<E: Eq + std::hash::Hash> HashMultiset<E> {
 	pub fn new() -> Self { Self(std::collections::HashMap::new()) }
 	pub fn contains(&self, item: &E) -> bool { self.0.contains_key(item) }
 	pub fn count(&self, item: &E) -> usize { self.0.get(item).copied().unwrap_or(0) }
