@@ -10,7 +10,8 @@ impl<E: Ord> BTreeMultiset<E> {
 	pub fn max(&self) -> Option<&E> { self.0.keys().next_back() }
 }
 
-struct HashMultiset<E>(std::collections::HashMap<E, usize>);
+#[derive(Clone, Debug)]
+pub struct HashMultiset<E>(std::collections::HashMap<E, usize>);
 impl<E: Eq + Hash> BTreeMultiset<E> {
 	pub fn new() -> Self { Self(std::collections::HashMap::new()) }
 	pub fn contains(&self, item: &E) -> bool { self.0.contains_key(item) }
