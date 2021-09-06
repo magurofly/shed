@@ -1,5 +1,7 @@
 # Brainfuckコード生成器
 
+[ソース](https://github.com/magurofly/shed/blob/master/brainfuck-mem.rb)
+
 使い方
 
 ```ruby
