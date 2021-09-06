@@ -480,42 +480,19 @@ class BrainMem
       @bm.copy(self, dst, tmp)
     end
 
-    def set(src)
-      @bm.set(self, src)
-    end
-
-    def add(src)
-      @bm.add(self, src)
-    end
-
-    def sub(src)
-      @bm.sub(self, src)
+    %i(zero getchar getdigit putchar putdigit set add sub).each do |name|
+      define_method(name) { |*args| @bm.method(name).call(self, *args) }
     end
 
     def times(&block)
       @bm.times(self, &block)
-    end
-
-    def getchar
-      @bm.getchar self
-    end
-
-    def getdigit
-      @bm.getdigit self
-    end
-
-    def putchar
-      @bm.putchar self
-    end
-
-    def putdigit
-      @bm.putdigit self
     end
   end
 
   def alloc(size = 1, base = @ptr)
     ptr = find_nearest_free(size, base)
     raise "Brainfuck: failed to alloc" unless ptr
+    STDERR.puts "alloc #{ptr}:#{size}"
     size.times do |i|
       @mem[ptr + i] = false
     end
@@ -524,6 +501,9 @@ class BrainMem
 
   def free(ptr)
     ptr, size = ptr.ptr, ptr.size
+    STDERR.puts "free #{ptr}:#{size}"
+    # go_to ptr
+    # _zero ptr
     size.times do |i|
       @mem[ptr + i] = true
     end
@@ -541,6 +521,13 @@ class BrainMem
     ptr = alloc(size, base)
     ret = yield(ptr)
     free(ptr)
+    ret
+  end
+
+  def alloc_tmps(count, size = 1, base = @ptr)
+    ptrs = (0 ... count).map { alloc(size, base) }
+    ret = yield(*ptrs)
+    ptrs.each { |ptr| free(ptr) }
     ret
   end
 
@@ -566,17 +553,17 @@ class BrainMem
   end
 
   def move(dst, src)
-    @bf.comment "#{dst} = move #{src}" if @verbose
+    @bf.comment "#{dst} = move(#{src})" if @verbose
     _move(dst, src)
   end
 
   def _move(dst, src)
     go_to src
     @bf << ?[
-      @bf << ?-
       go_to dst
       @bf << ?+
       go_to src
+      @bf << ?-
     @bf << ?]
   end
 
@@ -591,7 +578,8 @@ class BrainMem
   end
 
   def copy(dst, src, tmp = nil)
-    @bf.comment "#{dst} = copy #{src}" if @verbose
+    @bf.comment "#{dst} = #{src}" if @verbose
+    _copy(dst, src, tmp)
   end
 
   def _copy(dst, src, tmp = nil)
@@ -606,25 +594,24 @@ class BrainMem
       go_to src
       @bf << ?-
     @bf << ?]
-    _move(tmp, src)
+    _move(src, tmp)
   end
 
   def set(dst, src, tmp = nil)
-    @bf.comment "#{dst} = #{src}" if @verbose
     case src
     when Integer
-      go_to dst
-      @bf.add src
+      @bf.comment "#{dst} = #{src}" if @verbose
+      _addsub_const ?+, dst, src
     when String
-      go_to dst
-      @bf.add src.ord
+      @bf.comment "#{dst} = #{src.inspect}.ord" if @verbose
+      _addsub_const ?+, dst, src.ord
     when Ptr
       copy(dst, src, tmp)
     end
   end
 
   def _addsub_const(op, dst, val)
-    n = 8
+    n = 5
     if val >= n**2
       alloc_tmp do |tmp|
         _addsub_const(?+, tmp, val / n**2 * n)
@@ -659,7 +646,7 @@ class BrainMem
       @bf.comment "#{dst} += #{src.inspect}.ord" if @verbose
       _addsub_const ?+, dst, src.ord
     when Ptr
-      @bf.comment "#{dst} += move #{src}" if @verbose
+      @bf.comment "#{dst} += move(#{src})" if @verbose
       _add(dst, src)
     end
   end
@@ -693,7 +680,7 @@ class BrainMem
       @bf.comment "#{dst} -= #{src.inspect}.ord" if @verbose
       _addsub_const ?-, dst, src
     when Ptr
-      @bf.comment "#{dst} -= move #{src}" if @verbose
+      @bf.comment "#{dst} -= move(#{src})" if @verbose
       _sub(dst, src)
     end
   end
@@ -709,16 +696,28 @@ class BrainMem
     end
   end
 
-  def times(src)
-    @bf.comment "#{src} downto 0:"
-    @bf.indent += 1
+  def _times(src)
     go_to src
-    @bf << "[-"
+    @bf << "["
+      @bf.indent += 1
+      @bf.newline
       yield
-      go_to src
       @bf.indent -= 1
       @bf.newline
-    @bf << "]"
+      go_to src
+    @bf << "-]"
+  end
+
+  def times!(src, &block)
+    @bf.comment "for #{src} = #{src} downto 1:"
+    _times(src, &block)
+  end
+
+  def times(src, tmp = nil, &block)
+    return alloc_tmp { |ptr| times(src, ptr, &block) } unless tmp
+    @bf.comment "for #{tmp} = #{src} downto 1:"
+    copy tmp, src
+    _times(tmp, &block)
   end
 
   def putchar(src)
@@ -743,5 +742,29 @@ class BrainMem
     @bf.comment "#{dst} = getdigit" if @verbose
     go_to dst
     @bf.getdigit
+  end
+
+  def _mul(dst, src)
+    alloc_tmps(2) do |x, y|
+      _move x, dst
+      _times(src) do
+        _copy y, x
+        _add dst, y
+      end
+      _zero x
+    end
+  end
+
+  def mul!(dst, src)
+    @bf.comment "#{dst} *= move(#{src})" if @verbose
+    _mul(dst, src)
+  end
+
+  def mul(dst, src)
+    @bf.comment "#{dst} *= #{src}" if @verbose
+    alloc_tmp do |tmp|
+      _copy(tmp, src)
+      _mul(dst, tmp)
+    end
   end
 end
