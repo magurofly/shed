@@ -133,7 +133,7 @@ class Brainfuck
 
   def comment(text = "")
     newline unless @newline
-    self << escape(text)
+    self << "# " << escape(text)
     newline
   end
 
@@ -158,26 +158,13 @@ class Brainfuck
 
   # mem[ptr] += n
   # assert mem[ptr+shift*x] == 0
-  def add(n = 1, s = 1)
+  def add(n = 1)
     if n < 0
       sub -n
 
       return
     end
 
-    if n >= 25
-      shift s
-      add 5 * (n / 25), s
-      while_positive do
-        sub 1
-        shift -s
-        add 5
-        shift s
-      end
-      shift -s
-      n %= 25
-    end
-    
     self << ?+ * n
 
     return
@@ -190,45 +177,10 @@ class Brainfuck
       
       return
     end
-
-    if n >= 64
-      shift s
-      add 8 * (n / 64), shift
-      while_positive do
-        sub 1
-        shift -s
-        sub 8
-        shift s
-      end
-      shift -s
-      n %= 64
-    end
     
     self << ?- * n
 
     return
-  end
-
-  # mem[ptr+s] += mem[ptr]
-  # mem[ptr] = 0
-  def add!(s = 1)
-    while_positive do
-      sub 1
-      shift s
-      add 1
-      shift -s
-    end
-  end
-
-  # mem[ptr+s] -= mem[ptr]
-  # mem[ptr] = 0
-  def sub!(s = 1)
-    while_positive do
-      sub 1
-      shift s
-      sub 1
-      shift -s
-    end
   end
 
   # -- メモリ --
@@ -236,24 +188,10 @@ class Brainfuck
   # ptr += n
   def shift(n)
     if n > 0
-      right n
+      self << ?> * n
     elsif n < 0
-      left -n
+      self << ?< * -n
     end
-
-    return
-  end
-
-  # ptr -= n
-  def left(n = 1)
-    self << ?< * n
-
-    return
-  end
-
-  # ptr += n
-  def right(n)
-    self << ?> * n
 
     return
   end
@@ -522,6 +460,14 @@ class BrainMem
       @ptr, @size, @bm = ptr, size, bm
     end
 
+    def to_s
+      if @size != 1
+        "$(#{@ptr}:#{@size})"
+      else
+        "$#{@ptr}"
+      end
+    end
+
     def free
       @bm.free(self)
     end
@@ -550,12 +496,20 @@ class BrainMem
       @bm.times(self, &block)
     end
 
-    def to_s
-      if @size != 1
-        "$(#{@ptr}:#{@size})"
-      else
-        "$#{@ptr}"
-      end
+    def getchar
+      @bm.getchar self
+    end
+
+    def getdigit
+      @bm.getdigit self
+    end
+
+    def putchar
+      @bm.putchar self
+    end
+
+    def putdigit
+      @bm.putdigit self
     end
   end
 
@@ -669,6 +623,24 @@ class BrainMem
     end
   end
 
+  def _addsub_const(op, dst, val)
+    n = 8
+    if val >= n**2
+      alloc_tmp do |tmp|
+        _addsub_const(?+, tmp, val / n**2 * n)
+        go_to tmp
+        @bf.repeat do
+          go_to dst
+          _addsub_const(op, dst, n)
+          go_to tmp
+        end
+      end
+      val %= n**2
+    end
+    go_to dst
+    @bf << op * val
+  end
+
   def _add(dst, src)
     go_to src
     @bf << "[-"
@@ -682,12 +654,10 @@ class BrainMem
     case src
     when Integer
       @bf.comment "#{dst} += #{src}" if @verbose
-      go_to dst
-      @bf.add src
+      _addsub_const ?+, dst, src
     when String
       @bf.comment "#{dst} += #{src.inspect}.ord" if @verbose
-      go_to dst
-      @bf.add src.ord
+      _addsub_const ?+, dst, src.ord
     when Ptr
       @bf.comment "#{dst} += move #{src}" if @verbose
       _add(dst, src)
@@ -718,12 +688,10 @@ class BrainMem
     case src
     when Integer
       @bf.comment "#{dst} -= #{src}" if @verbose
-      go_to dst
-      @bf.sub src
+      _addsub_const ?-, dst, src
     when String
       @bf.comment "#{dst} -= #{src.inspect}.ord" if @verbose
-      go_to dst
-      @bf.sub src.ord
+      _addsub_const ?-, dst, src
     when Ptr
       @bf.comment "#{dst} -= move #{src}" if @verbose
       _sub(dst, src)
@@ -746,14 +714,34 @@ class BrainMem
     @bf.indent += 1
     go_to src
     @bf << "[-"
-    go_tmp { yield }
+      yield
+      go_to src
+      @bf.indent -= 1
+      @bf.newline
     @bf << "]"
-    @bf.indent -= 1
   end
 
   def putchar(src)
     @bf.comment "putchar #{src}" if @verbose
     go_to src
     @bf.putchar
+  end
+
+  def putdigit(src)
+    @bf.comment "putdigit #{src}" if @verbose
+    go_to src
+    @bf.putdigit
+  end
+
+  def getchar(dst)
+    @bf.comment "#{dst} = getchar" if @verbose
+    go_to dst
+    @bf.getchar
+  end
+
+  def getdigit(dst)
+    @bf.comment "#{dst} = getdigit" if @verbose
+    go_to dst
+    @bf.getdigit
   end
 end
