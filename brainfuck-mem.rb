@@ -492,7 +492,7 @@ class BrainMem
   def alloc(size = 1, base = @ptr)
     ptr = find_nearest_free(size, base)
     raise "Brainfuck: failed to alloc" unless ptr
-    STDERR.puts "alloc #{ptr}:#{size}"
+    # STDERR.puts "alloc #{ptr}:#{size}"
     size.times do |i|
       @mem[ptr + i] = false
     end
@@ -501,7 +501,7 @@ class BrainMem
 
   def free(ptr)
     ptr, size = ptr.ptr, ptr.size
-    STDERR.puts "free #{ptr}:#{size}"
+    # STDERR.puts "free #{ptr}:#{size}"
     # go_to ptr
     # _zero ptr
     size.times do |i|
@@ -628,11 +628,11 @@ class BrainMem
     @bf << op * val
   end
 
-  def _add(dst, src)
+  def _add(dst, src, scale = 1)
     go_to src
     @bf << "[-"
       go_to dst
-      @bf << ?+
+      @bf << ?+ * scale
       go_to src
     @bf << "]"
   end
@@ -662,11 +662,11 @@ class BrainMem
     end
   end
 
-  def _sub(dst, src)
+  def _sub(dst, src, scale = 1)
     go_to src
     @bf << "[-"
       go_to dst
-      @bf << ?-
+      @bf << ?- * scale
       go_to src
     @bf << "]"
   end
@@ -756,15 +756,28 @@ class BrainMem
   end
 
   def mul!(dst, src)
-    @bf.comment "#{dst} *= move(#{src})" if @verbose
-    _mul(dst, src)
+    case src
+    when Integer
+      @bf.comment "#{dst} *= #{src}" if @verbose
+      alloc_tmp do |tmp|
+        _move tmp, dst
+        _add dst, tmp, src
+      end
+    when Ptr
+      @bf.comment "#{dst} *= move(#{src})" if @verbose
+      _mul(dst, src)
+    end
   end
 
   def mul(dst, src)
-    @bf.comment "#{dst} *= #{src}" if @verbose
-    alloc_tmp do |tmp|
-      _copy(tmp, src)
-      _mul(dst, tmp)
+    if src.is_a? Ptr
+      @bf.comment "#{dst} *= #{src}" if @verbose
+      alloc_tmp do |tmp|
+        _copy(tmp, src)
+        _mul(dst, tmp)
+      end
+    else
+      mul!(dst, src)
     end
   end
 end
