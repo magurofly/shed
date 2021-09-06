@@ -316,8 +316,8 @@ class Brainfuck
       @input = input
       @read = 0
       @mem = [0] * MEM
-      @ptr = 0
-      @ptr_max = 0
+      @pointer = 0
+      @pointer_max = 0
       @output = ""
     end
   
@@ -337,35 +337,35 @@ class Brainfuck
       return false if @pc >= @program.size
       case @program[@pc]
       when ?+
-        @mem[@ptr] += 1
-        @mem[@ptr] %= 256
+        @mem[@pointer] += 1
+        @mem[@pointer] %= 256
         @pc += 1
       when ?-
-        @mem[@ptr] -= 1
-        @mem[@ptr] %= 256
+        @mem[@pointer] -= 1
+        @mem[@pointer] %= 256
         @pc += 1
       when ?<
-        raise "Brainfuck: negative pointer" if @ptr <= 0
-        @ptr -= 1
+        raise "Brainfuck: negative pointer" if @pointer <= 0
+        @pointer -= 1
         @pc += 1
       when ?>
-        raise "Brainfuck: memory limit exceeded" if @ptr >= MEM
-        @ptr += 1
-        @ptr_max = @ptr if @ptr_max < @ptr
+        raise "Brainfuck: memory limit exceeded" if @pointer >= MEM
+        @pointer += 1
+        @pointer_max = @pointer if @pointer_max < @pointer
         @pc += 1
       when ?.
-        @output << @mem[@ptr].chr
+        @output << @mem[@pointer].chr
         @pc += 1
       when ?,
         if @read < @input.size
-          @mem[@ptr] = @input[@read].ord
+          @mem[@pointer] = @input[@read].ord
           @read += 1
         else
-          @mem[@ptr] = 255
+          @mem[@pointer] = 255
         end
         @pc += 1
       when ?[
-        if @mem[@ptr] == 0
+        if @mem[@pointer] == 0
           depth = 1
           index = @pc
           while depth > 0 and index + 1 < @program.size
@@ -382,7 +382,7 @@ class Brainfuck
         end
         @pc += 1
       when ?]
-        if @mem[@ptr] != 0
+        if @mem[@pointer] != 0
           depth = -1
           index = @pc
           while depth < 0 and index > 0
@@ -418,10 +418,10 @@ input:    \e[31m{#{input}\e[31m}\e[m
 output:   \e[31m{\e[m#{output}\e[31m}\e[m
 memory:
       EOT
-      memory_rows = (0 ... (@ptr_max + 1 + 15) / 16).map { |i| ["    %02X: " % (i * 16), @mem[i * 16, 16].map { |d| "%02X" % d }] }
-      memrow = memory_rows[@ptr / 16][1]
-      memrow[@ptr % 16] = "\e[44;37m" + memrow[@ptr % 16]
-      memrow[@ptr % 16] += "\e[m"
+      memory_rows = (0 ... (@pointer_max + 1 + 15) / 16).map { |i| ["    %02X: " % (i * 16), @mem[i * 16, 16].map { |d| "%02X" % d }] }
+      memrow = memory_rows[@pointer / 16][1]
+      memrow[@pointer % 16] = "\e[44;37m" + memrow[@pointer % 16]
+      memrow[@pointer % 16] += "\e[m"
       out.puts memory_rows.map { |prefix, mem| prefix + mem.join(" ") }
     end
   
@@ -443,11 +443,11 @@ memory:
 end
 
 class BrainMem
-  attr_reader :bf, :ptr, :mem
+  attr_reader :bf, :pointer, :mem
   def initialize(verbose = false)
     @bf = Brainfuck.new
     @mem = [true] * 10000
-    @ptr = 0
+    @pointer = 0
     @verbose = verbose
   end
 
@@ -490,7 +490,7 @@ class BrainMem
     end
   end
 
-  def alloc(size = 1, base = @ptr)
+  def alloc(size = 1, base = @pointer)
     ptr = find_nearest_free(size, base)
     raise "Brainfuck: failed to alloc" unless ptr
     # STDERR.puts "alloc #{ptr}:#{size}"
@@ -510,7 +510,7 @@ class BrainMem
     end
   end
 
-  def find_nearest_free(size = 1, base = @ptr)
+  def find_nearest_free(size = 1, base = @pointer)
     i = base.upto(9999 - size + 1).find { |ptr| (0 ... size).all? { |offset| @mem[ptr + offset] } }
     if (i2 = (base - size + 1).downto(0).find { |ptr| (0 ... size).all? { |offset| @mem[ptr + offset] } })
       i = i2 if not i or (base - i).abs > (base - i2).abs
@@ -518,14 +518,14 @@ class BrainMem
     i
   end
 
-  def alloc_tmp(size = 1, base = @ptr)
+  def alloc_tmp(size = 1, base = @pointer)
     ptr = alloc(size, base)
     ret = yield(ptr)
     free(ptr)
     ret
   end
 
-  def alloc_tmps(count, size = 1, base = @ptr)
+  def alloc_tmps(count, size = 1, base = @pointer)
     ptrs = (0 ... count).map { alloc(size, base) }
     ret = yield(*ptrs)
     ptrs.each { |ptr| free(ptr) }
@@ -533,22 +533,22 @@ class BrainMem
   end
 
   def go_tmp
-    ptr = @ptr
+    ptr = @pointer
     ret = yield
     go_to ptr
     ret
   end
 
-  def go_by(size)
-    @ptr += size
-    if size < 0
-      @bf << ?< * -size
-    elsif size > 0
-      @bf << ?> * size
+  def go_by(delta)
+    @pointer += delta
+    if delta < 0
+      @bf << ?< * -delta
+    elsif delta > 0
+      @bf << ?> * delta
     end
   end
 
-  def go_to(to, offset = 0, from = @ptr)
+  def go_to(to, offset = 0, from = @pointer)
     to = to.ptr if to.is_a? Ptr
     go_by(to - from + offset)
   end
@@ -729,8 +729,10 @@ class BrainMem
 
   def putdigit(src)
     @bf.comment "putdigit #{src}" if @verbose
+    _addsub_const ?+, src, ?0.ord
     go_to src
-    @bf.putdigit
+    @bf.putchar
+    _addsub_const ?-, src, ?0.ord
   end
 
   def getchar(dst)
