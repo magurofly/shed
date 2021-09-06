@@ -91,6 +91,8 @@ brainfuck.rb
 
 =end
 class Brainfuck
+  MEM = 10000
+  DEFAULT_LIMIT = 100000
 
   attr_accessor :program, :indent
 
@@ -110,16 +112,16 @@ class Brainfuck
   end
 
   def make(input = "")
-    BrainfuckEnv.new(@program, input)
+    Env.new(@program, input)
   end
 
-  def run(input = "", count = 10000)
+  def run(input = "", count = DEFAULT_LIMIT)
     env = make(input)
     env.run(count)
     env.output
   end
 
-  def run_dump(input = "", count = 10000)
+  def run_dump(input = "", count = DEFAULT_LIMIT)
     env = make(input)
     env.run(count)
     env.dump
@@ -303,141 +305,140 @@ class Brainfuck
     putchar
     sub ?0.ord
   end
-end
 
-class BrainfuckEnv
-  MEM = 10000
-
-  attr_accessor :program, :pc, :input, :read, :mem, :ptr, :output
-
-  def initialize(program, input)
-    @program = program
-    @pc = 0
-    @input = input
-    @read = 0
-    @mem = [0] * MEM
-    @ptr = 0
-    @ptr_max = 0
-    @output = ""
-  end
-
-  def run(count = 100000)
-    i = 0
-    while i < count
-      break unless step
-      i += 1
+  class Env
+  
+    attr_accessor :program, :pc, :input, :read, :mem, :ptr, :output
+  
+    def initialize(program, input)
+      @program = program
+      @pc = 0
+      @input = input
+      @read = 0
+      @mem = [0] * MEM
+      @ptr = 0
+      @ptr_max = 0
+      @output = ""
     end
-
-    if i >= count
-      STDERR.puts "Brainfuck: program steps exceeded #{count}"
+  
+    def run(count = DEFAULT_LIMIT)
+      i = 0
+      while i < count
+        break unless step
+        i += 1
+      end
+  
+      if i >= count
+        STDERR.puts "Brainfuck: program steps exceeded #{count}"
+      end
     end
-  end
-
-  def step
-    return false if @pc >= @program.size
-    case @program[@pc]
-    when ?+
-      @mem[@ptr] += 1
-      @mem[@ptr] %= 256
-      @pc += 1
-    when ?-
-      @mem[@ptr] -= 1
-      @mem[@ptr] %= 256
-      @pc += 1
-    when ?<
-      raise "Brainfuck: negative pointer" if @ptr <= 0
-      @ptr -= 1
-      @pc += 1
-    when ?>
-      raise "Brainfuck: memory limit exceeded" if @ptr >= MEM
-      @ptr += 1
-      @ptr_max = @ptr if @ptr_max < @ptr
-      @pc += 1
-    when ?.
-      @output << @mem[@ptr].chr
-      @pc += 1
-    when ?,
-      if @read < @input.size
-        @mem[@ptr] = @input[@read].ord
-        @read += 1
-      else
-        @mem[@ptr] = 255
-      end
-      @pc += 1
-    when ?[
-      if @mem[@ptr] == 0
-        depth = 1
-        index = @pc
-        while depth > 0 and index + 1 < @program.size
-          index += 1
-          case @program[index]
-          when ?[
-            depth += 1
-          when ?]
-            depth -= 1
-          end
-        end
-        raise "Brainfuck: expected ]" if depth > 0
-        @pc = index
-      end
-      @pc += 1
-    when ?]
-      if @mem[@ptr] != 0
-        depth = -1
-        index = @pc
-        while depth < 0 and index > 0
-          index -= 1
-          case @program[index]
-          when ?[
-            depth += 1
-          when ?]
-            depth -= 1
-          end
-        end
-        if depth == 0
-          @pc = index
+  
+    def step
+      return false if @pc >= @program.size
+      case @program[@pc]
+      when ?+
+        @mem[@ptr] += 1
+        @mem[@ptr] %= 256
+        @pc += 1
+      when ?-
+        @mem[@ptr] -= 1
+        @mem[@ptr] %= 256
+        @pc += 1
+      when ?<
+        raise "Brainfuck: negative pointer" if @ptr <= 0
+        @ptr -= 1
+        @pc += 1
+      when ?>
+        raise "Brainfuck: memory limit exceeded" if @ptr >= MEM
+        @ptr += 1
+        @ptr_max = @ptr if @ptr_max < @ptr
+        @pc += 1
+      when ?.
+        @output << @mem[@ptr].chr
+        @pc += 1
+      when ?,
+        if @read < @input.size
+          @mem[@ptr] = @input[@read].ord
+          @read += 1
         else
-          # 対応するカッコがなければ先頭へ
-          @pc = -1
+          @mem[@ptr] = 255
         end
+        @pc += 1
+      when ?[
+        if @mem[@ptr] == 0
+          depth = 1
+          index = @pc
+          while depth > 0 and index + 1 < @program.size
+            index += 1
+            case @program[index]
+            when ?[
+              depth += 1
+            when ?]
+              depth -= 1
+            end
+          end
+          raise "Brainfuck: expected ]" if depth > 0
+          @pc = index
+        end
+        @pc += 1
+      when ?]
+        if @mem[@ptr] != 0
+          depth = -1
+          index = @pc
+          while depth < 0 and index > 0
+            index -= 1
+            case @program[index]
+            when ?[
+              depth += 1
+            when ?]
+              depth -= 1
+            end
+          end
+          if depth == 0
+            @pc = index
+          else
+            # 対応するカッコがなければ先頭へ
+            @pc = -1
+          end
+        end
+        @pc += 1
+      else
+        @pc += 1
       end
-      @pc += 1
-    else
-      @pc += 1
+      true
     end
-    true
-  end
-
-  def dump(out = STDERR)
-    program = "\e[m#{@program[0, @pc]}\e[31m@\e[m#{@program[@pc..-1]}".lines.join("          \e[31m|\e[m")
-    input = "\e[m#{@input[0, @read]}\e[31m@\e[m#{@input[@read..-1]}".lines.join("          \e[31m|\e[m")
-    output = @output.lines.join("          \e[31m|\e[m")
-    out.puts <<-EOT
+  
+    def dump(out = STDERR)
+      program = "\e[m#{@program[0, @pc]}\e[31m@\e[m#{@program[@pc..-1]}".lines.join("          \e[31m|\e[m")
+      input = "\e[m#{@input[0, @read]}\e[31m@\e[m#{@input[@read..-1]}".lines.join("          \e[31m|\e[m")
+      output = @output.lines.join("          \e[31m|\e[m")
+      out.puts <<-EOT
 program:  \e[31m{#{program}\e[31m}\e[m
 input:    \e[31m{#{input}\e[31m}\e[m
 output:   \e[31m{\e[m#{output}\e[31m}\e[m
 memory:
-    EOT
-    memory_rows = (0 ... (@ptr_max + 1 + 15) / 16).map { |i| ["    %02X: " % (i * 16), @mem[i * 16, 16].map { |d| "%02X" % d }] }
-    memrow = memory_rows[@ptr / 16][1]
-    memrow[@ptr % 16] = "\e[44;37m" + memrow[@ptr % 16]
-    memrow[@ptr % 16] += "\e[m"
-    out.puts memory_rows.map { |prefix, mem| prefix + mem.join(" ") }
-  end
-
-  def dump_run(wait = STDIN, out = STDERR, interval = 0.1)
-    out.puts "Enter to stop"
-    running = true
-    t = Thread.fork do
-      while running
-        break unless step
-        dump
-        sleep interval if interval
-      end
+      EOT
+      memory_rows = (0 ... (@ptr_max + 1 + 15) / 16).map { |i| ["    %02X: " % (i * 16), @mem[i * 16, 16].map { |d| "%02X" % d }] }
+      memrow = memory_rows[@ptr / 16][1]
+      memrow[@ptr % 16] = "\e[44;37m" + memrow[@ptr % 16]
+      memrow[@ptr % 16] += "\e[m"
+      out.puts memory_rows.map { |prefix, mem| prefix + mem.join(" ") }
     end
-    wait.gets
-    running = false
-    dump
+  
+    def dump_run(wait = STDIN, out = STDERR, interval = 0.1)
+      out.puts "Enter to stop"
+      running = true
+      t = Thread.fork do
+        while running
+          break unless step
+          dump
+          sleep interval if interval
+        end
+      end
+      wait.gets
+      running = false
+      dump
+    end
   end
 end
 
@@ -473,14 +474,14 @@ class BrainMem
     end
 
     def move_to(dst)
-      @bm.move(self, dst)
+      @bm.move(dst, self)
     end
 
     def copy_to(dst, tmp = nil)
-      @bm.copy(self, dst, tmp)
+      @bm.copy(dst, self, tmp)
     end
 
-    %i(zero getchar getdigit putchar putdigit set add sub).each do |name|
+    %i(move copy zero getchar getdigit putchar putdigit set add sub).each do |name|
       define_method(name) { |*args| @bm.method(name).call(self, *args) }
     end
 
@@ -778,6 +779,23 @@ class BrainMem
       end
     else
       mul!(dst, src)
+    end
+  end
+
+  def if_nonzero(src)
+    @bf.comment "if #{src} != 0:" if @verbose
+    alloc_tmp do |tmp|
+      _copy tmp, src  
+      go_to tmp
+      @bf << "["
+        @bf.indent += 1
+        @bf.newline
+        yield
+        @bf.indent -= 1
+        @bf.newline
+        go_to tmp
+        @bf << "[-]"
+      @bf << "]"
     end
   end
 end
