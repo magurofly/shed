@@ -29,7 +29,7 @@ class Deque {
   }
   
   pop_back() {
-    if (this.back.length == 0) this.back = this.front.splice(0, this.back.length + 1 >> 1).reverse();
+    if (this.back.length == 0) this.back = this.front.splice(0, this.front.length + 1 >> 1).reverse();
     return this.back.pop();
   }
 }
