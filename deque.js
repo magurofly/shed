@@ -1,38 +1,33 @@
 class Deque {
   constructor() {
-    this.head = [];
-    this.tail = [];
+    this.front = [];
+    this.back = [];
   }
 
   get length() {
-    return this.head.length + this.tail.length;
+    return this.front.length + this.back.length;
+  }
+  
+  get(index) {
+    if (index < this.front.length) return this.front[index];
+    return this.back[this.back.length - 1 - (index - this.front.length)];
   }
   
   push_front(...xs) {
-    this.head.push(...xs);
+    this.front.push(...xs);
   }
   
   push_back(...xs) {
-    this.tail.push(...xs);
+    this.back.push(...xs);
   }
   
   pop_front() {
-    if (!this.head.length) {
-      const tail = this.head;
-      tail.length = 0;
-      this.head = this.tail.reverse();
-      this.tail = tail;
-    }
-    return this.head.pop();
+    if (this.front.length == 0) this.front = this.back.splice(0, this.back.length + 1 >> 1).reverse();
+    return this.front.pop();
   }
   
   pop_back() {
-    if (!this.tail.length) {
-      const head = this.tail;
-      head.length = 0;
-      this.tail = this.head.reverse();
-      this.head = head;
-    }
-    return this.tail.pop();
+    if (this.back.length == 0) this.back = this.front.splice(0, this.back.length + 1 >> 1).reverse();
+    return this.back.pop();
   }
 }
