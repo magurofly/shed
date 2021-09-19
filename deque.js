@@ -1,3 +1,5 @@
+// License: CC0 1.0 Universal
+// https://www.slideshare.net/catupper/amortize-analysis-of-deque-with-2-stack
 class Deque {
   constructor() {
     this.front = [];
