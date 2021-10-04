@@ -1,8 +1,8 @@
 # xs の非順序対の差の総和を計算する
 # ```
-# pair_sum_sum(xs) == xs.combination(2).sum { _1 - _2 }
+# pair_diff_sum(xs) == xs.combination(2).sum { _1 - _2 }
 # ```
-def pair_sum_sum(xs)
+def pair_diff_sum(xs)
   n = xs.size
   ans = 0
   sum = 0
