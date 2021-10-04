@@ -1,8 +1,8 @@
 # xs の非順序対の差の絶対値の総和を計算する
 # ```
-# pair_sum_abs_diff(xs) == xs.combination(2).sum { (_1 - _2).abs }
+# sum_pair_abs_diff(xs) == xs.combination(2).sum { (_1 - _2).abs }
 # ```
-def pair_sum_abs_diff(xs)
+def sum_pair_abs_diff(xs)
   xs = xs.sort.reverse
   n = xs.size
   ans = 0
