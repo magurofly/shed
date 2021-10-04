@@ -1,8 +1,8 @@
 # xs の非順序対の積と和の総和を計算する
 # ```
-# pair_sum_affine(xs, ab, a, b, c) == xs.combination(2).sum { ab * _1 * _2 + a * _1 + b * _2 + c }
+# sum_pair_affine(xs, ab, a, b, c) == xs.combination(2).sum { ab * _1 * _2 + a * _1 + b * _2 + c }
 # ```
-def pair_sum_affine(xs, ab, a, b, c)
+def sum_pair_affine(xs, ab, a, b, c)
   n = xs.size
   ans = 0
   sum = 0

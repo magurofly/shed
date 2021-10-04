@@ -1,10 +1,10 @@
 # xs の非順序対のANDの総和を計算する
 # 非負整数のみ
 # ```
-# pair_sum_and(xs) == xs.combination(2).sum { _1 & _2 }
+# sum_pair_and(xs) == xs.combination(2).sum { _1 & _2 }
 # ```
 # 計算量: xs の長さを N 、ビット数を w とすると、 O(Nw)
-def pair_sum_and(xs)
+def sum_pair_and(xs)
   n = xs.size
   m = xs.map(&:bit_length).max
   (0 ... m).sum do |bit|
@@ -21,10 +21,10 @@ end
 # xs の非順序対のORの総和を計算する
 # 非負整数のみ
 # ```
-# pair_sum_or(xs) == xs.combination(2).sum { _1 | _2 }
+# sum_pair_or(xs) == xs.combination(2).sum { _1 | _2 }
 # ```
 # 計算量: xs の長さを N 、ビット数を w とすると、 O(Nw)
-def pair_sum_or(xs)
+def sum_pair_or(xs)
   n = xs.size
   m = xs.map(&:bit_length).max
   (0 ... m).sum do |bit|
@@ -47,10 +47,10 @@ end
 # xs の非順序対のXORの総和を計算する
 # 非負整数のみ
 # ```
-# pair_sum_xor(xs) == xs.combination(2).sum { _1 ^ _2 }
+# sum_pair_xor(xs) == xs.combination(2).sum { _1 ^ _2 }
 # ```
 # 計算量: xs の長さを N 、ビット数を w とすると、 O(Nw)
-def pair_sum_xor(xs)
+def sum_pair_xor(xs)
   n = xs.size
   m = xs.map(&:bit_length).max
   (0 ... m).sum do |bit|

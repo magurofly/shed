@@ -1,8 +1,8 @@
 # xs の非順序対の積の総和を計算する
 # ```
-# pair_mul_sum(xs) == xs.combination(2).sum { _1 * _2 }
+# sum_pair_mul(xs) == xs.combination(2).sum { _1 * _2 }
 # ```
-def pair_mul_sum(xs)
+def sum_pair_mul(xs)
   ans = 0
   sum = 0
   (xs.size - 2).downto(0) do |i|
