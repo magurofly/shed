@@ -3,6 +3,7 @@
 # ```
 # pair_sum_and(xs) == xs.combination(2).sum { _1 & _2 }
 # ```
+# 計算量: xs の長さを N 、ビット数を w とすると、 O(Nw)
 def pair_sum_and(xs)
   n = xs.size
   m = xs.map(&:bit_length).max
@@ -22,6 +23,7 @@ end
 # ```
 # pair_sum_or(xs) == xs.combination(2).sum { _1 | _2 }
 # ```
+# 計算量: xs の長さを N 、ビット数を w とすると、 O(Nw)
 def pair_sum_or(xs)
   n = xs.size
   m = xs.map(&:bit_length).max
@@ -47,6 +49,7 @@ end
 # ```
 # pair_sum_xor(xs) == xs.combination(2).sum { _1 ^ _2 }
 # ```
+# 計算量: xs の長さを N 、ビット数を w とすると、 O(Nw)
 def pair_sum_xor(xs)
   n = xs.size
   m = xs.map(&:bit_length).max
