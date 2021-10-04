@@ -1,6 +1,8 @@
 # 数列の計算
 
-- pair-sum-sum: 数列の非順序対の和の総和
-- pair-diff-sum: 数列の非順序対の差の総和
-- pair-diff-abs-sum: 数列の非順序対の差の絶対値の総和
-- pair-mul-sum: 数列の非順序対の積の総和
+長さ $N$ の数列 $A_1, A_2, \ldots, A_N$ が与えられたとき、何かを計算する
+
+ファイル名
+
+- `pair-(sum)-(f)`: 数列の非順序対に対する操作
+  - $\sum_{1 \le i \lt j \le N} f(A_i, A_j)$
