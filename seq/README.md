@@ -4,5 +4,8 @@
 
 ファイル名
 
-- `pair-(sum)-(f)`: 数列の非順序対に対する操作
-  - $\sum_{1 \le i \lt j \le N} f(A_i, A_j)$
+- `(f)-pair-(g)`: 数列の非順序対に対する操作
+  - $\underset{1 \le i \lt j \le N}{f} g(A_i, A_j)$
+
+- `(f)-css-(g)`: 数列の連続部分列に対する操作
+  - $\underset{1 \le L \le R \le N}{f} \underset{L \le i \le R}{g} A_i$
