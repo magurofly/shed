@@ -7,6 +7,9 @@ MOD = 10**9+7
 YESNO = %w(No Yes)
 INF = 10**9
 
+require "set"
+require "prime"
+
 def int; gets.to_s.to_i end
 def ints; gets.to_s.split.map { |s| s.to_i } end
 def int1s; gets.to_s.split.map { |s| s.to_i - 1 } end
