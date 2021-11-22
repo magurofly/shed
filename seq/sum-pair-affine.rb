@@ -1,6 +1,6 @@
 # xs の非順序対の積と和の総和を O(N) で計算する
 # ```
-# sum_pair_affine(xs, aa, bb, ab, a, b, c) == xs.combination(2).sum { aa * _1**2 + bb * _2**2 * ab * _1 * _2 + a * _1 + b * _2 + c }
+# sum_pair_affine(xs, aa, bb, ab, a, b, c) == xs.combination(2).sum { |x, y| aa * x*x + bb * y*y * ab * x*y + a * x + b * y + c }
 # ```
 def sum_pair_affine(xs, aa = 0, bb = 0, ab = 0, a = 0, b = 0, c = 0)
   n = xs.size
