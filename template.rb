@@ -19,6 +19,7 @@ def float; gets.to_s.to_f end
 def floats; gets.to_s.split.map { |s| s.to_f } end
 def array_of(&convert); gets.to_s.split.map(&convert) end
 def string; gets.to_s.chomp end
+def strings; gets.to_s.split end
 def rep(n, &b); Array.new(n, &b) end
 def yes; puts $yesno[1] end
 def no; puts $yesno[0] end
