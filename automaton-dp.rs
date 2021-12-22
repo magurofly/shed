@@ -107,7 +107,7 @@ where
   }
 
   /// 論理積をとる
-  pub fn intersection<R>(&self, other: AutomatonDP<R, C>) -> AutomatonDP<(Q, R), C>
+  pub fn intersection<R>(&self, other: &AutomatonDP<R, C>) -> AutomatonDP<(Q, R), C>
   where
     R: Copy + Eq + Hash
   {
