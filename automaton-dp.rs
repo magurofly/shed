@@ -29,6 +29,10 @@ fn main() {
 use std::collections::*;
 use std::hash::Hash;
 
+
+/// オートマトン（DFA）が受理するすべての文字列に対して DP をする
+/// - `Q`: 状態の型
+/// - `C`: 入力の型
 pub struct AutomatonDP<Q, C> {
   transition: HashMap<Q, Vec<(Q, C)>>,
   init: Q,
@@ -39,6 +43,7 @@ where
   Q: Copy + Eq + Hash,
   C: Copy + Eq + Hash
 {
+  /// 初期状態が `init` のオートマトンを作成する
   pub fn new(init: Q) -> Self {
     Self {
       transition: HashMap::new(),
@@ -47,14 +52,32 @@ where
     }
   }
 
+  /// 遷移を追加する
+  /// `from` 状態のとき、 `input` が来ると `to` 状態に遷移する
   pub fn add_transition(&mut self, from: Q, input: C, to: Q) {
     self.transition.entry(from).or_insert_with(Vec::new).push((to, input));
   }
 
+  /// 受理状態を追加する
   pub fn accept(&mut self, state: Q) {
     self.accept.push(state);
   }
 
+  /// 長さ `n` のすべての文字列に対して DP をする
+  /// - `op`: 加法
+  /// - `e`: 加法単位元を返す
+  /// - `map`: 乗法っぽいやつ
+  /// - `empty`: 空列に対する結果を返す
+  ///
+  /// ただし、乗せる値は半環（っぽいやつ）でないといけない
+  /// つまり:
+  /// ```
+  /// assert_eq!((op)(x, (op)(y, z)), (op)((op)(x, y), z));
+  /// assert_eq!((op)(x, (e)()), x);
+  /// assert_eq!((op)((e)(), x), x);
+  /// assert_eq!((op)(x, y), (op)(y, x));
+  /// assert_eq!((map)(c, (op)(x, y)), (op)((map)(c, x), (map)(c, y)));
+  /// ```
   pub fn compute<S, Op, E, Map, Empty>(&self, n: usize, op: Op, e: E, map: Map, empty: Empty) -> S
   where
     S: Clone + Sized,
