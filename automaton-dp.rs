@@ -1,8 +1,11 @@
+/// 桁 DP の例
+/// この例では、 `0` 以上 `7105` 以下の整数全ての和を計算している
 fn main() {
   let s = &[7, 1, 0, 5];
   let n = s.len();
 
   #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+  /// 状態
   enum State {
     Free(usize),
     BoundedU(usize),
@@ -25,6 +28,8 @@ fn main() {
   let ans = automaton.compute(n, |&(x, n), &(y, m)| (x + y, n + m), || (0, 0), |d, &(x, n)| (x * 10 + d * n, n), || (0, 1));
   println!("{}", ans.0);
 }
+
+
 
 use std::collections::*;
 use std::hash::Hash;
