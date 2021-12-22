@@ -1,11 +1,8 @@
-/// 桁 DP の例
-/// この例では、 `0` 以上 `7105` 以下の整数全ての和を計算している
 fn main() {
   let s = &[7, 1, 0, 5];
   let n = s.len();
 
   #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-  /// 状態
   enum State {
     Free(usize),
     BoundedU(usize),
@@ -28,8 +25,6 @@ fn main() {
   let ans = automaton.compute(n, |&(x, n), &(y, m)| (x + y, n + m), || (0, 0), |d, &(x, n)| (x * 10 + d * n, n), || (0, 1));
   println!("{}", ans.0);
 }
-
-
 
 use std::collections::*;
 use std::hash::Hash;
@@ -109,5 +104,36 @@ where
       ans = (op)(&ans, &dp.get(&q).cloned().unwrap_or_else(|| (e)()));
     }
     ans
+  }
+
+  /// 論理積をとる
+  pub fn intersection<R>(&self, other: AutomatonDP<R, C>) -> AutomatonDP<(Q, R), C>
+  where
+    R: Copy + Eq + Hash
+  {
+    let mut transition = HashMap::new();
+    for (&p1, tr1) in &self.transition {
+      for &(q1, c1) in tr1 {
+        for (&p2, tr2) in &other.transition {
+          for &(q2, c2) in tr2 {
+            if c1 != c2 {
+              continue;
+            }
+            transition.entry((p1, p2)).or_insert_with(Vec::new).push(((q1, q2), c1));
+          }
+        }
+      }
+    }
+    let mut accept = Vec::new();
+    for &q1 in &self.accept {
+      for &q2 in &other.accept {
+        accept.push((q1, q2));
+      }
+    }
+    AutomatonDP {
+      init: (self.init, other.init),
+      transition,
+      accept,
+    }
   }
 }
