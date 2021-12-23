@@ -10,7 +10,7 @@ fn main() {
   let automaton_l = AutomatonDP::digit_gte(digits, lower_bound);
   let automaton = automaton_l.intersection(&automaton_r);
 
-  let ans = automaton.compute(n, |&(x, n), &(y, m)| (x + y, n + m), || (0i64, 0i64), |d, &(x, n)| (x * 10 + d * n, n), || (0, 1));
+  let ans = automaton.compute::<(i64, i64), _, _, _, _>(n, |&(x, n), &(y, m)| (x + y, n + m), || (0, 0), |&(x, n), d| (x * 10 + d * n, n), || (0, 1));
   println!("{}", ans.0);
 }
 
@@ -71,7 +71,7 @@ where
     S: Clone + Sized,
     Op: Fn(&S, &S) -> S,
     E: Fn() -> S,
-    Map: Fn(C, &S) -> S,
+    Map: Fn(&S, C) -> S,
     Empty: Fn() -> S,
   {
     let mut dp = HashMap::new();
@@ -81,7 +81,7 @@ where
       for (&from, value) in &dp {
         for &(to, input) in &self.transition[&from] {
           let x = dp2.entry(to).or_insert_with(|| (e)());
-          let y = (op)(&x, &(map)(input, value));
+          let y = (op)(&x, &(map)(value, input));
           *x = y;
         }
       }
