@@ -22,7 +22,7 @@ use std::hash::Hash;
 /// - `Q`: 状態の型
 /// - `C`: 入力の型
 pub struct AutomatonDP<Q, C> {
-  transition: HashMap<Q, Vec<(Q, C)>>,
+  transition: HashMap<Q, HashMap<C, Q>>,
   init: Q,
   accept: Vec<Q>,
 }
@@ -43,7 +43,7 @@ where
   /// 遷移を追加する
   /// `from` 状態のとき、 `input` が来ると `to` 状態に遷移する
   pub fn add_transition(&mut self, from: Q, input: C, to: Q) {
-    self.transition.entry(from).or_insert_with(Vec::new).push((to, input));
+    self.transition.entry(from).or_insert_with(HashMap::new).insert(input, to);
   }
 
   /// 受理状態を追加する
@@ -79,7 +79,7 @@ where
     for _ in 0 .. n {
       let mut dp2 = HashMap::new();
       for (&from, value) in &dp {
-        for &(to, input) in &self.transition[&from] {
+        for (&input, &to) in &self.transition[&from] {
           let x = dp2.entry(to).or_insert_with(|| (e)());
           let y = (op)(&x, &(map)(value, input));
           *x = y;
@@ -101,12 +101,10 @@ where
   {
     let mut transition = HashMap::new();
     for (&p1, tr1) in &self.transition {
-      for &(q1, c1) in tr1 {
+      for (&c, &q1) in tr1 {
         for (&p2, tr2) in &other.transition {
-          for &(q2, c2) in tr2 {
-            if c1 == c2 {
-              transition.entry((p1, p2)).or_insert_with(Vec::new).push(((q1, q2), c1));
-            }
+          if let Some(&q2) = tr2.get(&c) {
+            transition.entry((p1, p2)).or_insert_with(HashMap::new).insert(c, (q1, q2));
           }
         }
       }
