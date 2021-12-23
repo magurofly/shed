@@ -3,9 +3,6 @@
 /// 正整数 L, R, M が与えられます。 L, R は共に 10 進法表現の長さが N の整数です。
 /// L, R をそれぞれ M/N 回繰り返したものを L', R' とします。
 /// L' 以上 R' 以下の整数の総和を求めてください。
-/// ## 制約
-/// - $1 \le L \le R \le 10^{1000}
-/// - $1 \le M \le 1000$
 fn main() {
   let digits = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
   let lower_bound = &[1, 2, 3];
@@ -86,6 +83,25 @@ where
     self.accept.clear();
   }
 
+  /// 状態を変換する
+  pub fn map<R, Map>(&self, map: Map) -> AutomatonDP<R, C>
+  where
+    R: Copy + Eq + Hash,
+    Map: Fn(Q) -> R,
+  {
+    let mut transition = HashMap::new();
+    for (&p, tr) in &self.transition {
+      let mut tr2 = HashMap::new();
+      for (&c, &q) in tr {
+        tr2.insert(c, (map)(q));
+      }
+      transition.insert((map)(p), tr2);
+    }
+    let accept = self.accept.iter().map(|&q| (map)(q)).collect();
+    let init = (map)(self.init);
+    AutomatonDP { transition, accept, init }
+  }
+
   /// 長さ `n` のすべての文字列に対して DP をする
   /// - `op`: 加法
   /// - `e`: 加法単位元を返す
@@ -101,6 +117,7 @@ where
   /// assert_eq!((op)(x, y), (op)(y, x));
   /// assert_eq!((map)(c, (op)(x, y)), (op)((map)(c, x), (map)(c, y)));
   /// ```
+  /// 計算量: O(n (状態数 + 遷移数))
   pub fn compute<S, Op, E, Map, Empty>(&self, n: usize, op: Op, e: E, map: Map, empty: Empty) -> S
   where
     S: Clone + Sized,
@@ -112,21 +129,31 @@ where
     let mut dp = HashMap::new();
     dp.insert(self.init, (empty)());
     for _ in 0 .. n {
-      let mut dp2 = HashMap::new();
-      for (&from, value) in &dp {
-        for (&input, &to) in &self.transition[&from] {
-          let x = dp2.entry(to).or_insert_with(|| (e)());
-          let y = (op)(&x, &(map)(value, input));
-          *x = y;
-        }
-      }
-      dp = dp2;
+      dp = self.dp_forward(&dp, &op, &e, &map);
     }
     let mut ans = (e)();
     for &q in &self.accept {
       ans = (op)(&ans, &dp.get(&q).cloned().unwrap_or_else(|| (e)()));
     }
     ans
+  }
+
+  pub fn dp_forward<S, Op, E, Map>(&self, dp: &HashMap<Q, S>, op: &Op, e: &E, map: &Map) -> HashMap<Q, S>
+  where
+    S: Clone + Sized,
+    Op: Fn(&S, &S) -> S,
+    E: Fn() -> S,
+    Map: Fn(&S, C) -> S,
+  {
+    let mut dp2 = HashMap::new();
+    for (&from, value) in dp {
+      for (&input, &to) in &self.transition[&from] {
+        let x = dp2.entry(to).or_insert_with(|| (e)());
+        let y = (op)(&x, &(map)(value, input));
+        *x = y;
+      }
+    }
+    dp2
   }
 
   /// 論理積をとる
