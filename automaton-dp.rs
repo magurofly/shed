@@ -1,16 +1,29 @@
 /// 例: 桁DP
-/// l 以上 r 以下の整数の合計
+/// ## 問題文
+/// 正整数 L, R, M が与えられます。 L, R は共に 10 進法表現の長さが N の整数です。
+/// L, R をそれぞれ M/N 回繰り返したものを L', R' とします。
+/// L' 以上 R' 以下の整数の総和を求めてください。
+/// ## 制約
+/// - $1 \le L \le R \le 10^{1000}
+/// - $1 \le M \le 1000$
 fn main() {
   let digits = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  let lower_bound = &[2, 7, 1, 8, 2, 8, 1, 8, 2, 8];
-  let upper_bound = &[3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
-  let n = 10;
+  let lower_bound = &[1, 2, 3];
+  let upper_bound = &[3, 2, 1];
+  let n = 3;
+  let m = 7;
 
-  let automaton_r = AutomatonDP::digit_lte(digits, upper_bound);
-  let automaton_l = AutomatonDP::digit_gte(digits, lower_bound);
-  let automaton = automaton_l.intersection(&automaton_r);
+  // let automaton_r = AutomatonDP::digit_lte(digits, upper_bound);
+  // let automaton_l = AutomatonDP::digit_gte(digits, lower_bound);
+  // let automaton = automaton_l.intersection(&automaton_r);
+  let mut automaton = AutomatonDP::digit_between(digits, lower_bound, upper_bound);
+  automaton.reject_all();
+  automaton.accept(DigitDPState::BothBounded(m % n));
+  automaton.accept(DigitDPState::UpperBounded(m % n));
+  automaton.accept(DigitDPState::LowerBounded(m % n));
+  automaton.accept(DigitDPState::Unbounded(m % n));
 
-  let ans = automaton.compute::<(i64, i64), _, _, _, _>(n, |&(x, n), &(y, m)| (x + y, n + m), || (0, 0), |&(x, n), d| (x * 10 + d * n, n), || (0, 1));
+  let ans = automaton.compute::<(i64, i64), _, _, _, _>(m, |&(x, n), &(y, m)| (x + y, n + m), || (0, 0), |&(x, n), d| (x * 10 + d * n, n), || (0, 1));
   println!("{}", ans.0);
 }
 
@@ -46,9 +59,31 @@ where
     self.transition.entry(from).or_insert_with(HashMap::new).insert(input, to);
   }
 
+  /// 遷移を削除する
+  pub fn remove_transition(&mut self, from: Q, input: C) {
+    self.transition.entry(from).and_modify(|tr| {
+      tr.remove(&input);
+    });
+  }
+
   /// 受理状態を追加する
   pub fn accept(&mut self, state: Q) {
     self.accept.push(state);
+  }
+
+  /// 受理状態を削除する
+  /// O(accept.len())
+  pub fn reject(&mut self, state: Q) {
+    let mut prev = 0;
+    while let Some(index) = (prev .. self.accept.len()).find(|&i| self.accept[i] == state) {
+      self.accept.swap_remove(index);
+      prev = index;
+    }
+  }
+
+  /// 受理状態をクリアする
+  pub fn reject_all(&mut self) {
+    self.accept.clear();
   }
 
   /// 長さ `n` のすべての文字列に対して DP をする
@@ -123,51 +158,107 @@ where
   }
 }
 
-impl<C> AutomatonDP<usize, C>
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DigitDPState {
+  BothBounded(usize),
+  LowerBounded(usize),
+  UpperBounded(usize),
+  Unbounded(usize),
+}
+impl<C> AutomatonDP<DigitDPState, C>
 where
   C: Copy + Eq + Hash
 {
-  /// 辞書順で A 以下の数列を受理するオートマトンを作成
+  /// 辞書順で upper_bound 以下の数列を受理するオートマトンを作成
   /// 頂点数 O(upper_bound.len())
   /// 辺数 O(upper_bound.len() * digits.len())
   pub fn digit_lte(digits: &[C], upper_bound: &[C]) -> Self {
+    use DigitDPState::*;
     let n = upper_bound.len();
-    let mut automaton = AutomatonDP::new(0);
-    automaton.accept(n);
-    automaton.accept(2 * n + 1);
-    for i in 0 .. n {
+    let mut automaton = AutomatonDP::new(UpperBounded(0));
+    automaton.accept(UpperBounded(n));
+    automaton.accept(Unbounded(n));
+    for i in 0 ..= n {
+      let r = upper_bound[i % n];
       for &c in digits {
-        automaton.add_transition(n + 1 + i, c, n + 1 + i + 1);
+        automaton.add_transition(Unbounded(i), c, Unbounded(i % n + 1));
       }
       for &c in digits {
-        if upper_bound[i] == c {
-          automaton.add_transition(i, c, i + 1);
+        if c == r {
+          automaton.add_transition(UpperBounded(i), c, UpperBounded(i % n + 1));
           break;
         }
-        automaton.add_transition(i, c, n + 1 + i + 1);
+        automaton.add_transition(UpperBounded(i), c, Unbounded(i % n + 1));
       }
     }
     automaton
   }
 
-  /// 辞書順で A 以上の数列を受理するオートマトンを作成
-  /// 頂点数 O(upper_bound.len())
-  /// 辺数 O(upper_bound.len() * digits.len())
+  /// 辞書順で lower_bound 以上の数列を受理するオートマトンを作成
+  /// 頂点数 O(lower_bound.len())
+  /// 辺数 O(lower_bound.len() * digits.len())
   pub fn digit_gte(digits: &[C], lower_bound: &[C]) -> Self {
+    use DigitDPState::*;
     let n = lower_bound.len();
-    let mut automaton = AutomatonDP::new(0);
-    automaton.accept(n);
-    automaton.accept(2 * n + 1);
-    for i in 0 .. n {
+    let mut automaton = AutomatonDP::new(LowerBounded(0));
+    automaton.accept(LowerBounded(n));
+    automaton.accept(Unbounded(n));
+    for i in 0 ..= n {
+      let l = lower_bound[i % n];
       for &c in digits {
-        automaton.add_transition(n + 1 + i, c, n + 1 + i + 1);
+        automaton.add_transition(Unbounded(i), c, Unbounded(i % n + 1));
       }
       for &c in digits.into_iter().rev() {
-        if lower_bound[i] == c {
-          automaton.add_transition(i, c, i + 1);
+        if c == l {
+          automaton.add_transition(LowerBounded(i), c, LowerBounded(i % n + 1));
           break;
         }
-        automaton.add_transition(i, c, n + 1 + i + 1);
+        automaton.add_transition(LowerBounded(i), c, Unbounded(i % n + 1));
+      }
+    }
+    automaton
+  }
+
+  /// 辞書順で lower_bound 以上 upper_bound 以下の数列を受理するオートマトンを作成
+  pub fn digit_between(digits: &[C], lower_bound: &[C], upper_bound: &[C]) -> Self {
+    use DigitDPState::*;
+    assert_eq!(upper_bound.len(), lower_bound.len());
+    let n = lower_bound.len();
+    let s = digits.len();
+    let mut automaton = AutomatonDP::new(BothBounded(0));
+    automaton.accept(BothBounded(n));
+    automaton.accept(LowerBounded(n));
+    automaton.accept(UpperBounded(n));
+    automaton.accept(Unbounded(n));
+    for i in 0 ..= n {
+      let (l, r) = (lower_bound[i % n], upper_bound[i % n]);
+      for &c in digits {
+        automaton.add_transition(Unbounded(i), c, Unbounded(i % n + 1));
+      }
+      for &c in digits.into_iter().rev() {
+        if c == l {
+          automaton.add_transition(LowerBounded(i), c, LowerBounded(i % n + 1));
+          break;
+        }
+        automaton.add_transition(LowerBounded(i), c, Unbounded(i % n + 1));
+      }
+      for &c in digits {
+        if c == r {
+          automaton.add_transition(UpperBounded(i), c, UpperBounded(i % n + 1));
+          break;
+        }
+        automaton.add_transition(UpperBounded(i), c, Unbounded(i % n + 1));
+      }
+      let lower = (0 .. s).find(|&j| digits[j] == l).unwrap();
+      let upper = (0 .. s).find(|&j| digits[j] == r).unwrap();
+      if lower == upper {
+        automaton.add_transition(BothBounded(i), digits[lower], BothBounded(i % n + 1));
+      } else if lower < upper {
+        automaton.add_transition(BothBounded(i), digits[lower], LowerBounded(i % n + 1));
+        automaton.add_transition(BothBounded(i), digits[upper], UpperBounded(i % n + 1));
+        for &c in &digits[lower + 1 .. upper] {
+          automaton.add_transition(BothBounded(i), c, Unbounded(i % n + 1));
+        }
       }
     }
     automaton
