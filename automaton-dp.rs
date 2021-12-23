@@ -1,34 +1,22 @@
+/// 例: 桁DP
+/// l 以上 r 以下の整数の合計
 fn main() {
-  let s = &[7, 1, 0, 5];
-  let n = s.len();
+  let digits = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  let lower_bound = &[2, 7, 1, 8, 2, 8, 1, 8, 2, 8];
+  let upper_bound = &[3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
+  let n = 10;
 
-  #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-  enum State {
-    Free(usize),
-    BoundedU(usize),
-  }
-  use State::*;
+  let automaton_r = AutomatonDP::digit_lte(digits, upper_bound);
+  let automaton_l = AutomatonDP::digit_gte(digits, lower_bound);
+  let automaton = automaton_l.intersection(&automaton_r);
 
-  let mut automaton = AutomatonDP::new(BoundedU(0));
-  automaton.accept(BoundedU(n));
-  automaton.accept(Free(n));
-  for i in 0 .. n {
-    for c in 0 ..= 9 {
-      automaton.add_transition(Free(i), c, Free(i + 1));
-    }
-    for c in 0 .. s[i] {
-      automaton.add_transition(BoundedU(i), c, Free(i + 1));
-    }
-    automaton.add_transition(BoundedU(i), s[i], BoundedU(i + 1));
-  }
-
-  let ans = automaton.compute(n, |&(x, n), &(y, m)| (x + y, n + m), || (0, 0), |d, &(x, n)| (x * 10 + d * n, n), || (0, 1));
+  let ans = automaton.compute(n, |&(x, n), &(y, m)| (x + y, n + m), || (0i64, 0i64), |d, &(x, n)| (x * 10 + d * n, n), || (0, 1));
   println!("{}", ans.0);
 }
 
+
 use std::collections::*;
 use std::hash::Hash;
-
 
 /// オートマトン（DFA）が受理するすべての文字列に対して DP をする
 /// - `Q`: 状態の型
@@ -116,10 +104,9 @@ where
       for &(q1, c1) in tr1 {
         for (&p2, tr2) in &other.transition {
           for &(q2, c2) in tr2 {
-            if c1 != c2 {
-              continue;
+            if c1 == c2 {
+              transition.entry((p1, p2)).or_insert_with(Vec::new).push(((q1, q2), c1));
             }
-            transition.entry((p1, p2)).or_insert_with(Vec::new).push(((q1, q2), c1));
           }
         }
       }
@@ -135,5 +122,56 @@ where
       transition,
       accept,
     }
+  }
+}
+
+impl<C> AutomatonDP<usize, C>
+where
+  C: Copy + Eq + Hash
+{
+  /// 辞書順で A 以下の数列を受理するオートマトンを作成
+  /// 頂点数 O(upper_bound.len())
+  /// 辺数 O(upper_bound.len() * digits.len())
+  pub fn digit_lte(digits: &[C], upper_bound: &[C]) -> Self {
+    let n = upper_bound.len();
+    let mut automaton = AutomatonDP::new(0);
+    automaton.accept(n);
+    automaton.accept(2 * n + 1);
+    for i in 0 .. n {
+      for &c in digits {
+        automaton.add_transition(n + 1 + i, c, n + 1 + i + 1);
+      }
+      for &c in digits {
+        if upper_bound[i] == c {
+          automaton.add_transition(i, c, i + 1);
+          break;
+        }
+        automaton.add_transition(i, c, n + 1 + i + 1);
+      }
+    }
+    automaton
+  }
+
+  /// 辞書順で A 以上の数列を受理するオートマトンを作成
+  /// 頂点数 O(upper_bound.len())
+  /// 辺数 O(upper_bound.len() * digits.len())
+  pub fn digit_gte(digits: &[C], lower_bound: &[C]) -> Self {
+    let n = lower_bound.len();
+    let mut automaton = AutomatonDP::new(0);
+    automaton.accept(n);
+    automaton.accept(2 * n + 1);
+    for i in 0 .. n {
+      for &c in digits {
+        automaton.add_transition(n + 1 + i, c, n + 1 + i + 1);
+      }
+      for &c in digits.into_iter().rev() {
+        if lower_bound[i] == c {
+          automaton.add_transition(i, c, i + 1);
+          break;
+        }
+        automaton.add_transition(i, c, n + 1 + i + 1);
+      }
+    }
+    automaton
   }
 }
