@@ -81,6 +81,7 @@ class Array
   def lower_bound; ac, wa = size, 0; while wa - ac > 1; if yield(self[(wj = (ac + wa) / 2)]); ac = wj else; wa = wj end; end; ac end
   def cum(*xs, &op); a = []; a << xs[0] if xs.size > 0; a << x = self[0]; (1...size).each { |i| a << x = op[x, self[i]] }; a end
   def cumdiff(range); self[range.end_open] - self[range.begin]; end
+  def compress(kinds = uniq.sort!); map { |x| kinds.bsearch_index { _1 >= x } }; end
 end
 
 module Enumerable
