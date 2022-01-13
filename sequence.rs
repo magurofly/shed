@@ -1,24 +1,50 @@
+// fn main() {
+//   struct Join;
+//   impl Monoid for Join {
+//     type S = String;
+//     fn op(x: &String, y: &String) -> String {
+//       let mut s = String::new();
+//       s.push_str(x);
+//       s.push_str(y);
+//       s
+//     }
+//     fn e() -> String { "".to_string() }
+//   }
+
+//   let mut seq = Sequence::<Join>::new();
+//   seq.push_back("b".to_string());
+//   seq.push_front("a".to_string());
+//   seq.push_back("c".to_string());
+//   println!("prod(..) = {}", seq.prod(..));
+//   eprintln!("{:?}", seq);
+
+//   seq.print();
+// }
+
 fn main() {
-  struct Join;
-  impl Monoid for Join {
-    type S = String;
-    fn op(x: &String, y: &String) -> String {
-      let mut s = String::new();
-      s.push_str(x);
-      s.push_str(y);
-      s
-    }
-    fn e() -> String { "".to_string() }
+  let A = &[1, 2, 4, 8, 16, 32, 64, 128, 256, 512];
+  
+  struct Xor;
+  impl Monoid for Xor {
+    type S = u64;
+    fn op(&x: &u64, &y: &u64) -> u64 { x ^ y }
+    fn e() -> u64 { 0 }
   }
 
-  let mut seq = Sequence::<Join>::new();
-  seq.push_back("b".to_string());
-  seq.push_front("a".to_string());
-  seq.push_back("c".to_string());
-  println!("prod(..) = {}", seq.prod(..));
-  eprintln!("{:?}", seq);
-
+  let mut seq = Sequence::<Xor>::new();
+  for &x in A {
+    seq.push_back(x);
+  }
   seq.print();
+  dbg!(seq.prod(7 ..= 8));
+  // 2 3 6
+  // 2 1 6
+  // 2 1 10
+  // 1 9 4
+  // 1 6 1
+  // 1 6 3
+  // 1 1 7
+  // 2 3 5
 }
 
 use sequence::{Monoid, Sequence};
@@ -243,17 +269,22 @@ pub mod sequence {
         return prod;
       }
       if let Some(left) = &self.children[0] {
-        prod = M::op(&left.prod(l, r), &prod);
-        l = 0;
+        if l < left.len {
+          prod = M::op(&left.prod(l, r), &prod);
+          l = 0;
+        } else {
+          l -= left.len;
+        }
         r -= left.len;
       }
-      if l <= 0 && 0 < r {
+      if l == 0 && 0 < r {
         prod = M::op(&prod, &self.value);
-        l = 0;
-        r -= 1;
       }
+      r -= 1;
       if let Some(right) = &self.children[1] {
-        prod = M::op(&prod, &right.prod(l, r));
+        if l <= r {
+          prod = M::op(&prod, &right.prod(l, r));
+        }
       }
       prod
     }
