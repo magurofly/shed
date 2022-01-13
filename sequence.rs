@@ -17,6 +17,8 @@ fn main() {
   seq.push_back("c".to_string());
   println!("prod(..) = {}", seq.prod(..));
   eprintln!("{:?}", seq);
+
+  seq.print();
 }
 
 use sequence::{Monoid, Sequence};
@@ -144,6 +146,32 @@ pub mod sequence {
         M::e()
       }
     }
+
+    pub fn print(&self) where M::S: std::fmt::Debug {
+      let mut nodes = vec![];
+      if let Some(root) = &self.root {
+        for i in 0 .. self.len() {
+          nodes.push(root.at(i));
+        }
+      }
+      let height = self.root.as_ref().map(|node| node.height()).unwrap_or(0);
+      let mut strs = vec![vec![]; height];
+      for node in nodes {
+        let s = format!("({:?}, {:?})", node.value(), node.prod(0, node.len()));
+        let n = s.len();
+        let j = node.height();
+        for i in 0 .. height {
+          if i == height - j {
+            strs[i].push(s.clone());
+          } else {
+            strs[i].push(" ".repeat(n));
+          }
+        }
+      }
+      for s in strs {
+        println!("{}", s.join(""));
+      }
+    }
   }
 
   pub struct Node<M: Monoid> {
@@ -197,6 +225,10 @@ pub mod sequence {
       self.len
     }
 
+    pub fn height(&self) -> usize {
+      self.height
+    }
+
     pub fn value(&self) -> &M::S {
       &self.value
     }
@@ -224,6 +256,11 @@ pub mod sequence {
         prod = M::op(&prod, &right.prod(l, r));
       }
       prod
+    }
+
+    pub fn child(&self, dir: usize) -> Option<&Self> {
+      assert!(dir < 2);
+      Some(self.children[dir].as_ref()?)
     }
 
     pub fn set_value(&mut self, index: usize, value: M::S) {
