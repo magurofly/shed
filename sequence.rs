@@ -22,7 +22,7 @@
 // }
 
 fn main() {
-  let A = &[1, 2, 4, 8, 16, 32, 64, 128, 256, 512];
+  let a = &[1, 2, 4, 8, 16, 32, 64, 128, 256, 512];
   
   struct Xor;
   impl Monoid for Xor {
@@ -32,7 +32,7 @@ fn main() {
   }
 
   let mut seq = Sequence::<Xor>::new();
-  for &x in A {
+  for &x in a {
     seq.push_back(x);
   }
   seq.print();
@@ -279,8 +279,11 @@ pub mod sequence {
       }
       if l == 0 && 0 < r {
         prod = M::op(&prod, &self.value);
+        r -= 1;
+      } else {
+        l -= 1;
+        r -= 1;
       }
-      r -= 1;
       if let Some(right) = &self.children[1] {
         if l <= r {
           prod = M::op(&prod, &right.prod(l, r));
