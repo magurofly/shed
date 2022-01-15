@@ -1,54 +1,39 @@
-// fn main() {
-//   struct Join;
-//   impl Monoid for Join {
-//     type S = String;
-//     fn op(x: &String, y: &String) -> String {
-//       let mut s = String::new();
-//       s.push_str(x);
-//       s.push_str(y);
-//       s
-//     }
-//     fn e() -> String { "".to_string() }
-//   }
-
-//   let mut seq = Sequence::<Join>::new();
-//   seq.push_back("b".to_string());
-//   seq.push_front("a".to_string());
-//   seq.push_back("c".to_string());
-//   println!("prod(..) = {}", seq.prod(..));
-//   eprintln!("{:?}", seq);
-
-//   seq.print();
-// }
-
 fn main() {
-  let a = &[1, 2, 4, 8, 16, 32, 64, 128, 256, 512];
-  
-  struct Xor;
-  impl Monoid for Xor {
-    type S = u64;
-    fn op(&x: &u64, &y: &u64) -> u64 { x ^ y }
-    fn e() -> u64 { 0 }
+  struct Join;
+  impl Monoid for Join {
+    type S = String;
+    fn op(x: &String, y: &String) -> String {
+      let mut s = String::new();
+      s.push_str(x);
+      s.push_str(y);
+      s
+    }
+    fn e() -> String { "".to_string() }
   }
 
-  let mut seq = Sequence::<Xor>::new();
-  for &x in a {
-    seq.push_back(x);
+  let mut seq = Sequence::<Join>::new();
+  for c in "0123456789".chars() {
+    seq.push_back(c.to_string());
   }
+
   seq.print();
-  dbg!(seq.prod(7 ..= 8));
-  // 2 3 6
-  // 2 1 6
-  // 2 1 10
-  // 1 9 4
-  // 1 6 1
-  // 1 6 3
-  // 1 1 7
-  // 2 3 5
+  
+  dbg!(seq.prod(..));
+  for i in 0 ..= 9 {
+    dbg!(seq.get(i));
+  }
+  seq.set(9, "a".to_string());
+  seq.print();
+  dbg!(seq.prod(7 .. 9));
+  dbg!(seq.prod(2 .. 6));
+  dbg!(seq.prod(0 .. 6));
+  dbg!(seq.prod(0 .. 10));
 }
 
 use sequence::{Monoid, Sequence};
 pub mod sequence {
+  use std::iter::FromIterator;
+
   pub trait Monoid {
     type S;
     fn op(x: &Self::S, y: &Self::S) -> Self::S;
@@ -65,9 +50,16 @@ pub mod sequence {
   }
   impl<M: Monoid> Clone for Sequence<M> where M::S: Clone {
     fn clone(&self) -> Self {
-      Self {
-        root: self.root.clone(),
+      Self { root: self.root.clone() }
+    }
+  }
+  impl<M: Monoid> FromIterator<M::S> for Sequence<M> {
+    fn from_iter<T: IntoIterator<Item = M::S>>(iter: T) -> Self {
+      let mut seq = Self::new();
+      for x in iter {
+        seq.push_back(x);
       }
+      seq
     }
   }
   impl<M: Monoid> Sequence<M> {
@@ -89,9 +81,10 @@ pub mod sequence {
       (self, after)
     }
 
-    pub fn append(&mut self, mut after: Self) {
+    pub fn merge(mut self, mut after: Self) -> Self {
       let root = Node::merge(self.root.take(), after.root.take());
       self.root = root;
+      self
     }
 
     pub fn push_back(&mut self, value: M::S) {
@@ -261,31 +254,27 @@ pub mod sequence {
 
     pub fn prod(&self, mut l: usize, mut r: usize) -> M::S {
       let mut prod = M::e();
-      if l >= r {
-        return prod;
-      }
       if l == 0 && self.len <= r {
         prod = M::op(&prod, &self.prod);
+        r = 0;
+      }
+      if l >= r {
         return prod;
       }
       if let Some(left) = &self.children[0] {
         if l < left.len {
           prod = M::op(&left.prod(l, r), &prod);
-          l = 0;
-        } else {
-          l -= left.len;
         }
-        r -= left.len;
+        l = l.saturating_sub(left.len);
+        r = r.saturating_sub(left.len);
       }
       if l == 0 && 0 < r {
         prod = M::op(&prod, &self.value);
-        r -= 1;
-      } else {
-        l -= 1;
-        r -= 1;
       }
+      l = l.saturating_sub(1);
+      r = r.saturating_sub(1);
       if let Some(right) = &self.children[1] {
-        if l <= r {
+        if l < r {
           prod = M::op(&prod, &right.prod(l, r));
         }
       }
@@ -298,9 +287,7 @@ pub mod sequence {
     }
 
     pub fn set_value(&mut self, index: usize, value: M::S) {
-      self.bottom_up_mut(index, &mut |node| {
-        node.update_mut();
-      }, |node| {
+      self.bottom_up_mut(index, &mut |node| node.update_mut(), |node| {
         node.value = value;
         node.update_mut();
       });
