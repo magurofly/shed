@@ -57,6 +57,7 @@ class Integer
   def div_ceil(y); (self + y - 1) / y end
   def mod_inv(mod = MOD); pow(mod-2, mod) end
   def mod_div(y, mod = MOD); self * mod_inv(y, mod) % mod end
+  def mod_nCr(r, mod = MOD); x = y = 1; (1..r).each { |i| x = x * (self + 1 - i) % mod; y = y * i % mod }; x.mod_div(y, mod); end
   def factorial(mod = MOD); (2..self).inject(1) { |f, x| f * x % mod } end
   def popcount; x = self; c = 0; while x > 0; c += 1 if x & 1 == 1; x >>= 1 end; c end #TODO: faster
   def bitbrute(&block); (1<<self).times(&block) end
