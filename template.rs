@@ -11,7 +11,6 @@ fn main() {
 type Int = i64;
 const MOD: Int = 1_000_000_007; type Mod = Mod1000000007;
 // const MOD: Int = 998244353; type Mod = Mod998244353;
-const MOD: Int = Mod::modulus();
 const INF: Int = 1_000_000_000;
 const YESNO: [&'static str; 2] = ["Yes", "No"];
 
