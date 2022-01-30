@@ -9,8 +9,8 @@ fn main() {
 }
 
 type Int = i64;
-type Mod = Mod1000000007;
-// type Mod = Mod998244353;
+const MOD: Int = 1_000_000_007; type Mod = Mod1000000007;
+// const MOD: Int = 998244353; type Mod = Mod998244353;
 const MOD: Int = Mod::modulus();
 const INF: Int = 1_000_000_000;
 const YESNO: [&'static str; 2] = ["Yes", "No"];
@@ -26,7 +26,7 @@ use num_integer::*;
 use petgraph::prelude::*; // (Stable)?(Di|Un)?Graph, (Di|Un)?GraphMap, (Node|Edge)Index, Bfs, Dfs, DfsPostOrder
 use petgraph::unionfind::UnionFind;
 
-type Mint = ModInt<Mod>; fn mint(x: impl ToPrimitive) -> Mint { Mint::new(x.to_i64()); }
+type Mint = ModInt<Mod>; fn mint(x: impl ToPrimitive) -> Mint { Mint::new(x.to_i64().unwrap()) }
 fn yes() { println!("{}", YESNO[0]); }
 fn no() { println!("{}", YESNO[1]); }
 fn yesno(c: bool) { println!("{}", if c { YESNO[0] } else { YESNO[1] }); }
