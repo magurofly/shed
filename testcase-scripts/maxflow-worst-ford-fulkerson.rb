@@ -1,3 +1,5 @@
+# https://wandbox.org/permlink/dXdJBcctPde3843G
+
 index_start = 1 # 0 にすると 0-index
 cap_max = 10**9
 
