@@ -7,7 +7,7 @@ MOD = 10**9+7
 $yesno = %w(No Yes)
 YesNo = %w(No Yes)
 YESNO = %w(NO YES)
-INF = 10**9
+INF = 10**18
 
 require "set"
 require "prime"
