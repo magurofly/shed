@@ -1,4 +1,5 @@
 def convolution_karatsuba(a, b)
+  n, m = a.size, b.size
   return convolution_naive(a, b) if n <= 60 or m <= 60
   l = [n, m].min / 2
   nh, mh = n - l, m - l
@@ -31,7 +32,7 @@ def convolution_karatsuba(a, b)
   end
   d = convolution_karatsuba(d1, d2)
   d.each_with_index do |z, k|
-    ans[l + k] += z
+    ans[l + k] -= z
   end
   ans
 end
