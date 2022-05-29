@@ -5,8 +5,8 @@ main = -> {
 DEBUG = true
 MOD = 10**9+7
 $yesno = %w(No Yes)
-YesNo = %w(No Yes)
-YESNO = %w(NO YES)
+$YesNo = %w(No Yes)
+$YESNO = %w(NO YES)
 INF = 10**18
 
 require "set"
@@ -23,9 +23,9 @@ def strings; gets.to_s.split end
 def rep(n, &b); Array.new(n, &b) end
 def yes; puts $yesno[1] end
 def no; puts $yesno[0] end
-def yesno t; puts $yesno[t] end
-def YesNo t; puts YesNo[t] end
-def YESNO t; puts YESNO[t] end
+def yesno t; puts $yesno[t ? 1 : 0] end
+def YesNo t; puts $YesNo[t ? 1 : 0] end
+def YESNO t; puts $YESNO[t ? 1 : 0] end
 def zip(xs, *yss); Enumerator.new { |y| xs.zip(*yss) { |a| y.yield(*a) } } end
 def max(*xs, &block); block_given? ? xs.max_by(&block) : xs.max end
 def min(*xs, &block); block_given? ? xs.min_by(&block) : xs.min end
