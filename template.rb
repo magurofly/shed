@@ -2,12 +2,12 @@ main = -> {
   
 }
 
-DEBUG = true
+DEBUG = false
 MOD = 10**9+7
+INF = 10**18
 $yesno = %w(No Yes)
 $YesNo = %w(No Yes)
 $YESNO = %w(NO YES)
-INF = 10**18
 
 require "set"
 require "prime"
