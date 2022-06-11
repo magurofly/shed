@@ -1,5 +1,6 @@
 module Main
-  p [3, 1, 4, 1, 5].compress
+  
+  
 end
 
 MOD = 998244353
