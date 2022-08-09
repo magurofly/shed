@@ -1,7 +1,7 @@
 class MaxFlow(T)
   class Arc(T)
     property from, to, cap, flow
-    def initialize(@from : Int32, @to : Int32, @cap : T, @flow); end
+    def initialize(@from : Int32, @to : Int32, @cap : T, @flow : T); end
     def residual_cap; cap - flow end
   end
 
@@ -23,13 +23,14 @@ class MaxFlow(T)
     return 0 if limit == 0
     flow_sum = 0
     (0 ... limit.bit_length).reverse_each do |bit|
-      flow = 1 << bit
+      unit = 1 << bit
       loop do
-        level = bfs(s)
+        level = bfs(s, unit)
         break if level[t] == n
-        flow += dfs(level, [0] * n, s, t, flow, limit - flow_sum)
+        flow_sum += dfs(level, [0] * n, s, t, unit, limit - flow_sum)
       end
     end
+    flow_sum
   end
 
   # 残余ネットワーク上で source からの到達判定
@@ -48,14 +49,14 @@ class MaxFlow(T)
     visited
   end
 
-  private def bfs(s)
+  private def bfs(s, unit)
     level = [n] * n
     level[s] = 0
     queue = Deque.new([s])
     while (u = queue.shift?)
       @graph[u].each do |e|
         arc = @arcs[e]
-        next if level[arc.to] < level[u] + 1 || arc.residual_cap <= 0
+        next if level[arc.to] < level[u] + 1 || arc.residual_cap < unit
         level[arc.to] = level[u] + 1
         queue << arc.to
       end
@@ -63,19 +64,19 @@ class MaxFlow(T)
     level
   end
 
-  private def dfs(level, iter, u, t, base, limit)
-    return flow if u == t
+  private def dfs(level, iter, u, t, unit, limit)
+    return limit if u == t
     flow_sum = 0
     while iter[u] < @graph[u].size
       e = @graph[u][iter[u]]
       arc = @arcs[e]
-      if level[u] < level[arc.to] && arc.residual_cap >= base
-        delta = dfs(level, iter, arc.to, t, base, [arc.residual_cap, limit - flow_sum].min)
+      if level[u] < level[arc.to] && arc.residual_cap >= unit
+        delta = dfs(level, iter, arc.to, t, unit, [arc.residual_cap, limit - flow_sum].min)
         if delta > 0
           arc.flow += delta
           @arcs[e ^ 1].flow -= delta
           flow_sum += delta
-          break if limit - flow_sum < base
+          break if limit - flow_sum < unit
         end
       end
       iter[u] += 1
