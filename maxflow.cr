@@ -16,7 +16,7 @@ class MaxFlow(T)
   def arc(e : Int32); @arcs[e * 2] end
   def add_vertex; v = n; @graph << [] of Int32; v end
   def add_vertices(n : Int32); (0 ... n).map { add_vertex } end
-  def add_arc(from u : Int32, to v : Int32, cap c : Int32); e = m; @arcs << Arc(T).new(u, v, c, 0) << Arc(T).new(v, u, c, c); @graph[u] << (e * 2); @graph[v] << (e * 2 + 1); @cap_sum += c; e end
+  def add_arc(from u : Int32, to v : Int32, cap c : T); e = m; @arcs << Arc(T).new(u, v, c, 0) << Arc(T).new(v, u, c, c); @graph[u] << (e * 2); @graph[v] << (e * 2 + 1); @cap_sum += c; e end
 
   # source から sink へ最大 limit 流す
   def flow(source s : Int32, sink t : Int32, limit : T = @cap_sum)
