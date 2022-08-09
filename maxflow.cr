@@ -35,18 +35,7 @@ class MaxFlow(T)
 
   # 残余ネットワーク上で source からの到達判定
   def cut(source : Int32)
-    visited = [false] * n
-    visited[source] = true
-    stack = [source]
-    while (u = stack.pop?)
-      @graph[u].each do |e|
-        arc = @arcs[e]
-        next if visited[arc.to] || arc.residual_cap <= 0
-        visited[arc.to] = true
-        stack << arc.to
-      end
-    end
-    visited
+    bfs(source, 1).map { |d| d < n }
   end
 
   private def bfs(s, unit)
