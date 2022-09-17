@@ -33,6 +33,7 @@ class Deque {
   constructor(b = []) { this.a = []; this.b = b.slice(); }
   get length() { return this.a.length + this.b.length; }
   get(i) { return (i < this.a.length) ? this.a[i] : this.b[this.b.length - 1 - (i - this.a.length)]; }
+  set(i, x) { if (i < this.a.length) this.a[i] = x; else this.b[this.b.length - 1 - (i - this.a.length)] = x; }
   push_front(...xs) { this.a.push(...xs); }
   push_back(...xs) { this.b.push(...xs); }
   pop_front() { if (!this.a.length) this.a = this.b.splice(0, this.b.length + 1 >> 1).reverse(); return this.a.pop(); }
