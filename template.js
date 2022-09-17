@@ -38,5 +38,5 @@ class Deque {
   push_back(...xs) { this.b.push(...xs); }
   pop_front() { if (!this.a.length) this.a = this.b.splice(0, this.b.length + 1 >> 1).reverse(); return this.a.pop(); }
   pop_back() { if (this.b.length == 0) this.b = this.a.splice(0, this.a.length + 1 >> 1).reverse(); return this.b.pop(); }
-  *[Symbol.iterator]() { for (const x of this.a) yield value; for (let i = this.b.length; i--; ) yield this.b[i]; }
+  *[Symbol.iterator]() { for (const x of this.a) yield x; for (let i = this.b.length; i--; ) yield this.b[i]; }
 }
