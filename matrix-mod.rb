@@ -21,8 +21,9 @@ class ModMatrix
   end
 
   def *(other)
+    raise "dimension mismatch: #{@n} != #{other.m}" unless @n == other.m
     self.class.new((0 ... @n).map { |i|
-      (0 ... other.n).map { |j|
+      (0 ... other.m).map { |j|
         (0 ... @m).sum { |k| self[i, k] * other[k, j] } % MOD
       }
     })
