@@ -61,3 +61,17 @@ trait MyPrimInt : PrimInt {
   fn convert<T: PrimInt>(self) -> T { <T as NumCast>::from(self).unwrap() }
 }
 impl<T: PrimInt> MyPrimInt for T {}
+
+#[derive(Debug, Clone, Default)]
+pub struct BTreeMultiset<T: Ord> { len: usize, set: std::collections::BTreeMap<T, usize> }
+impl<'a, T: Ord> BTreeMultiset<T> {
+  pub fn new() -> Self { Self { len: 0, set: std::collections::BTreeMap::new() } }
+  pub fn len(&self) -> usize { self.len }
+  pub fn insert_multiple(&mut self, x: T, count: usize) -> usize { self.len += count; let n = self.set.entry(x).or_insert(0); *n += count; *n }
+  pub fn insert(&mut self, x: T) -> usize { self.insert_multiple(x, 1) }
+  pub fn remove_multiple(&mut self, x: &T, count: usize) -> usize { if let Some(n) = self.set.get_mut(x) { let n0 = *n; *n = n0.saturating_sub(count); let n = *n; self.len -= n0 - n; if n == 0 { self.set.remove(x); } n } else { 0 } }
+  pub fn remove(&mut self, x: &T) -> usize { self.remove_multiple(x, 1) }
+  pub fn iter(&'a self) -> std::collections::btree_map::Iter<'a, T, usize> { self.set.iter() }
+  pub fn into_iter(self) -> std::collections::btree_map::IntoIter<T, usize> { self.set.into_iter() }
+  pub fn keys(&'a self) -> std::collections::btree_map::Keys<'a, T, usize> { self.set.keys() }
+}
