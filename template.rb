@@ -3,7 +3,8 @@ main = -> {
 }
 
 DEBUG = false
-MOD = 10**9+7
+MOD = 998244353
+#MOD = 10**9+7
 INF = 10**18
 $yesno = %w(No Yes)
 $YesNo = %w(No Yes)
@@ -12,14 +13,15 @@ $YESNO = %w(NO YES)
 require "set"
 require "prime"
 
-def int; gets.to_s.to_i end
-def ints; gets.to_s.split.map { |s| s.to_i } end
-def int1s; gets.to_s.split.map { |s| s.to_i - 1 } end
-def float; gets.to_s.to_f end
-def floats; gets.to_s.split.map { |s| s.to_f } end
-def array_of(&convert); gets.to_s.split.map(&convert) end
 def string; gets.to_s.chomp end
 def strings; gets.to_s.split end
+def int; string.to_i end
+def int1; int - 1 end
+def ints; strings.map { |s| s.to_i } end
+def int1s; strings.map { |s| s.to_i - 1 } end
+def float; string.to_f end
+def floats; strings.map { |s| s.to_f } end
+def array_of(&convert); strings.map(&convert) end
 def rep(n, &b); Array.new(n, &b) end
 def yes; puts $yesno[1] end
 def no; puts $yesno[0] end
