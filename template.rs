@@ -11,7 +11,7 @@ fn main() {
 type Int = i64;
 const MOD: Int = 998244353;
 // const MOD: Int = 1_000_000_007;
-const INF: Int = 1_000_000_000;
+const INF: Int = 1_000_000_000_000_000_000;
 const YESNO: [&'static str; 2] = ["Yes", "No"];
 
 use proconio::{input, fastout, marker::{Chars, Bytes, Usize1}};
