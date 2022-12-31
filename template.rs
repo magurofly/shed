@@ -2,7 +2,10 @@
 
 #[fastout]
 fn main() {
-  println!("{:?}", vec![99824353i64].into_iter().map(|p| (p, p.is_prime()) ).collect::<Vec<_>>());
+  input! {
+  }
+  
+  
 }
 
 type Int = i64;
@@ -27,13 +30,14 @@ fn no() { println!("{}", YESNO[1]); }
 fn yesno(c: bool) { println!("{}", if c { YESNO[0] } else { YESNO[1] }); }
 fn neighbor4<F: FnMut(usize, usize)>(i: usize, j: usize, h: usize, w: usize, mut f: F) { if i > 0 { (f)(i - 1, j); } if i < h - 1 { (f)(i + 1, j); } if j > 0 { (f)(i, j - 1); } if j < w - 1 { (f)(i, j + 1); } }
 
-trait MyItertools : Iterator {
-  fn to_vec(self) -> Vec<Self::Item> where Self: Sized { self.collect::<Vec<_>>() }
-  fn to_vec_rev(self) -> Vec<Self::Item> where Self: Sized { let mut v = self.collect::<Vec<_>>(); v.reverse(); v }
-  fn tally(self) -> HashMap<Self::Item, usize> where Self: Sized, Self::Item: Copy + Eq + hash::Hash { let mut counts = HashMap::new(); self.for_each(|item| *counts.entry(item).or_default() += 1 ); counts }
-  fn count_if<P: Fn(&Self::Item) -> bool>(self, predicate: P) -> usize where Self: Sized { self.filter(predicate).count() }
+trait MyItertools : Iterator + Sized {
+  fn to_vec(self) -> Vec<Self::Item> { self.collect::<Vec<_>>() }
+  fn to_vec_rev(self) -> Vec<Self::Item> { let mut v = self.collect::<Vec<_>>(); v.reverse(); v }
+  fn tally(self) -> HashMap<Self::Item, usize> where Self::Item: Copy + Eq + hash::Hash { let mut counts = HashMap::new(); self.for_each(|item| *counts.entry(item).or_default() += 1 ); counts }
+  fn count_if<P: Fn(&Self::Item) -> bool>(self, predicate: P) -> usize { self.filter(predicate).count() }
+  fn implode(self, sep: &str) -> String where Self::Item: std::string::ToString { self.map(|x| x.to_string()).to_vec().join(sep) }
 }
-impl<T: ?Sized> MyItertools for T where T: Iterator {}
+impl<T: ?Sized> MyItertools for T where T: Iterator + Sized {}
 
 trait MyOrd : PartialOrd + Sized {
   fn chmax(&mut self, mut rhs: Self) -> bool { if self < &mut rhs { *self = rhs; true } else { false } }
