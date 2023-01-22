@@ -63,6 +63,7 @@ trait MyPrimInt : PrimInt {
   fn align_ceil(self, unit: Self) -> Self { self.ceiling_div(unit) * unit }
   /// 他の整数型に変換する
   fn convert<T: PrimInt>(self) -> T { <T as NumCast>::from(self).unwrap() }
+  fn pow(self, mut e: Self) -> Self { let (mut a, mut r) = (self, Self::one()); while e > Self::zero() { if e & Self::one() == Self::one() { r = r * a; } a = a * a; e = e >> 1; } r }
 }
 impl<T: PrimInt> MyPrimInt for T {}
 
