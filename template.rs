@@ -36,6 +36,7 @@ trait MyItertools : Iterator + Sized {
   fn tally(self) -> HashMap<Self::Item, usize> where Self::Item: Copy + Eq + hash::Hash { let mut counts = HashMap::new(); self.for_each(|item| *counts.entry(item).or_default() += 1 ); counts }
   fn count_if<P: Fn(&Self::Item) -> bool>(self, predicate: P) -> usize { self.filter(predicate).count() }
   fn implode(self, sep: &str) -> String where Self::Item: std::string::ToString { self.map(|x| x.to_string()).to_vec().join(sep) }
+  fn mex(self, gen: impl IntoIterator<Item = Self::Item>) -> Self::Item where Self::Item: Ord { let mut v = self.collect::<Vec<_>>(); v.sort(); v.dedup(); let mut it = v.into_iter(); gen.into_iter().find(|a| if let Some(x) = it.next() { a != &x } else { true }).unwrap() }
 }
 impl<T: ?Sized> MyItertools for T where T: Iterator + Sized {}
 
