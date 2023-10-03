@@ -6,7 +6,7 @@ fn main() {
     
   }
   
-  
+  println!("{:?}", 7.ext_gcd(3));
 }
 
 type Int = i64;
@@ -57,7 +57,9 @@ trait MyPrimInt : PrimInt {
   fn is_prime(self) -> bool { let u = Self::zero().count_zeros() - self.leading_zeros(); if u <= 8 || u > 64 { self._is_prime_sqrt() } else { self._is_prime_miller_rabin(&if u <= 32 { vec![2, 7, 61] } else { vec![2, 3, 5, 7, 11, 13, 17] }.into_iter().map(MyPrimInt::convert).collect::<Vec<_>>()) } }
   fn _is_prime_sqrt(self) -> bool { let mut k = 2.convert(); while k * k <= self { if (self % k).is_zero() { return false; } k = k + Self::one(); } true }
   fn _is_prime_miller_rabin(self, bases: &[Self]) -> bool { if self <= Self::one() { return false; } for &a in bases { if self == a { return true; } if (self % a).is_zero() { return false; } } let mut d = self - Self::one(); d = d >> d.trailing_zeros() as usize; for &a in bases { let mut t = d; let mut y = a.mod_pow(t, self); while !(self - t).is_one() && !y.is_one() && !(self - y).is_one() { y = y * y % self; t = t << 1; } if !(self - y).is_one() && (t % 2.convert()).is_zero() { return false; } } true }
-  fn ext_gcd(self, x: Self) -> (Self, Self) { let y = self % x; if y.is_zero() { return (x, Self::zero()); } let (mut p, mut q) = ((x, Self::zero()), (y, Self::one())); while !q.0.is_zero() { let u = p.0 / q.0; p = (p.0 - q.0 * u, p.1 - q.1 * u); std::mem::swap(&mut p, &mut q); } if p.0 < Self::zero() { p.0 = p.0 + x / p.0; } p }
+  /// 拡張ユークリッドの互助法 `(gcd(self, a), x)` s.t. `self * x + a * y == gcd(self, a)` for some y
+  // fn ext_gcd(self, a: Self) -> (Self, Self, Self) { if self < a { let (g, y, x) = a.ext_gcd(self); (g, x, y) } else if a.is_zero() { (self, Self::one(), Self::one()) } else { let (g, y, x) = a.ext_gcd(self % a); (g, x, y - x * (self / a)) } }
+  fn ext_gcd(self, x: Self) -> (Self, Self) { let y = self % x; if y.is_zero() { return (x, y); } let (mut p, mut q) = ((x, Self::zero()), (y, Self::one())); while !q.0.is_zero() { let u = p.0 / q.0; p = (p.0 - q.0 * u, p.1 - q.1 * u); std::mem::swap(&mut p, &mut q); } if p.0 < Self::zero() { p.0 = p.0 + x / p.0; } p }
   /// `(self / other).ceil()`
   fn ceiling_div(self, other: Self) -> Self { (self + other - Self::one()) / other }
   /// `(self / unit).floor() * unit`
@@ -67,6 +69,8 @@ trait MyPrimInt : PrimInt {
   /// 他の整数型に変換する
   fn convert<T: PrimInt>(self) -> T { <T as NumCast>::from(self).unwrap() }
   fn pow(self, mut e: Self) -> Self { let (mut a, mut r) = (self, Self::one()); while e > Self::zero() { if e & Self::one() == Self::one() { r = r * a; } a = a * a; e = e >> 1; } r }
+  /// base を基数としたときの各桁を求める（ 0 のときは vec![0] ）
+  fn digits(mut self, base: Self) -> Vec<Self> { assert!(base > Self::zero()); let mut d = vec![]; while self != Self::zero() { d.push(self % base); self = self / base; } d.reverse(); if d.is_empty() { d.push(Self::zero()); }; d }
 }
 impl<T: PrimInt> MyPrimInt for T {}
 
