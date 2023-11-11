@@ -13,6 +13,7 @@ $YESNO = %w(NO YES)
 require "set"
 require "prime"
 
+alias say puts
 def string; gets.to_s.chomp end
 def strings; gets.to_s.split end
 def int; string.to_i end
