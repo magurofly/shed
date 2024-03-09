@@ -1,12 +1,10 @@
 #![allow(dead_code, unused_imports, unused_macros, non_snake_case)]
 
 fn main() {
-  // let mut src = LineSource::new(io::BufReader::new(io::stdin()));
   input! {
     
   }
   
-  println!("{:?}", 7.ext_gcd(3));
 }
 
 type Int = i64;
@@ -15,7 +13,7 @@ const MOD: Int = 998244353;
 const INF: Int = 1_000_000_000_000_000_000;
 const YESNO: [&'static str; 2] = ["Yes", "No"];
 
-use proconio::{input, marker::{Chars, Bytes, Usize1}, source::line::LineSource};
+use proconio::{input, input_interactive, marker::{Chars, Bytes, Usize1}, source::line::LineSource};
 use std::*;
 use std::ops::*;
 use collections::*; // (BTree|Hash)(Set|Map), BinaryHeap, VecDeque, LinkedList
