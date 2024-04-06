@@ -87,3 +87,27 @@ impl<'a, T: Ord> BTreeMultiset<T> {
   pub fn keys(&'a self) -> btree_map::Keys<'a, T, usize> { self.set.keys() }
   pub fn range(&'a self, range: impl RangeBounds<T>) -> btree_map::Range<'a, T, usize> { self.set.range(range) }
 }
+
+#[derive(Clone, Debug)]
+pub struct RectangleSum { imos: Vec<Vec<i64>>, h: usize, w: usize }
+impl RectangleSum {
+  pub fn new(data: &[Vec<i64>]) -> Self {
+    let h = data.len();
+    let w = data[0].len();
+    let mut imos = vec![vec![0; w + 1]; h + 1];
+    for i in 0 .. h { for j in 0 .. w {
+      let sum = imos[i + 1][j] + imos[i][j + 1] - imos[i][j] + data[i][j];
+      imos[i + 1][j + 1] = sum;
+    } }
+    Self { imos, h, w }
+  }
+  
+  pub fn sum(&self, i: impl std::ops::RangeBounds<usize>, j: impl std::ops::RangeBounds<usize>) -> i64 {
+    use std::ops::Bound::*;
+    let i0 = match i.start_bound() { Included(&i) => i, Excluded(&i) => i + 1, Unbounded => 0 };
+    let i1 = match i.end_bound() { Included(&i) => i + 1, Excluded(&i) => i, Unbounded => self.h };
+    let j0 = match j.start_bound() { Included(&j) => j, Excluded(&j) => j + 1, Unbounded => 0 };
+    let j1 = match j.end_bound() { Included(&j) => j + 1, Excluded(&j) => j, Unbounded => self.w };
+    self.imos[i1][j1] - self.imos[i1][j0] + self.imos[i0][j0] - self.imos[i0][j1]
+  }
+}
