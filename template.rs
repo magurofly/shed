@@ -111,3 +111,52 @@ impl RectangleSum {
     self.imos[i1][j1] - self.imos[i1][j0] + self.imos[i0][j0] - self.imos[i0][j1]
   }
 }
+
+pub struct Factorial<M: ModIntBase> {
+  fact: Vec<M>,
+  fact_inv: Vec<M>,
+}
+impl<M: ModIntBase> Factorial<M> {
+  pub fn new() -> Self { Self { fact: vec![M::from(1)], fact_inv: vec![M::from(1)] } }
+
+  pub fn fact(&mut self, n: usize) -> M { self.ensure(n); self.fact[n] }
+
+  pub fn fact_inv(&mut self, n: usize) -> M { self.ensure(n); self.fact_inv[n] }
+
+  /// 二項係数（組合せ）
+  pub fn binom(&mut self, n: usize, r: usize) -> M {
+    if r > n { return M::from(0); }
+    self.ensure(n);
+    self.fact[n] * self.fact_inv[n - r] * self.fact_inv[r]
+  }
+
+  /// 順列
+  pub fn perm(&mut self, n: usize, r: usize) -> M {
+    if r > n { return M::from(0); }
+    self.ensure(n);
+    self.fact[n] * self.fact_inv[n - r]
+  }
+
+  /// 重複組合せ
+  pub fn homo(&mut self, n: usize, r: usize) -> M {
+    if n + r == 0 { return M::from(1); }
+    self.binom(n + r - 1, r)
+  }
+
+  pub fn ensure(&mut self, n: usize) {
+    if n < self.fact.len() {
+      return;
+    }
+    let old_len = self.fact.len();
+    let new_len = (n + 1).next_power_of_two();
+    self.fact.resize(new_len, M::from(1));
+    self.fact_inv.resize(new_len, M::from(1));
+    for i in old_len .. new_len {
+      self.fact[i] = self.fact[i - 1] * M::from(i);
+    }
+    self.fact_inv[new_len - 1] = self.fact[new_len - 1].inv();
+    for i in (old_len .. new_len - 1).rev() {
+      self.fact_inv[i] = self.fact_inv[i + 1] * M::from(i + 1);
+    }
+  }
+}
