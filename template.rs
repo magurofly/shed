@@ -112,11 +112,11 @@ impl RectangleSum {
   }
 }
 
-pub struct Factorial<M: ModIntBase> {
+pub struct Factorial<M: ac_library::modint::ModIntBase> {
   fact: Vec<M>,
   fact_inv: Vec<M>,
 }
-impl<M: ModIntBase> Factorial<M> {
+impl<M: ac_library::modint::ModIntBase> Factorial<M> {
   pub fn new() -> Self { Self { fact: vec![M::from(1)], fact_inv: vec![M::from(1)] } }
 
   pub fn fact(&mut self, n: usize) -> M { self.ensure(n); self.fact[n] }
