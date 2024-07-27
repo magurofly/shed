@@ -2,8 +2,9 @@
 
 fn main() {
   input! {
-    
+
   }
+
   
 }
 
@@ -159,4 +160,131 @@ impl<M: ac_library::modint::ModIntBase> Factorial<M> {
       self.fact_inv[i] = self.fact_inv[i + 1] * M::from(i + 1);
     }
   }
+}
+
+fn new_unweighted(n: usize) -> Vec<Vec<usize>> { vec![vec![]; n] }
+fn new_weighted<T>(n: usize) -> Vec<Vec<(usize, T)>> { (0 .. n).map(|_| vec![] ).collect() }
+
+pub trait AdjacentList<T> {
+  fn n(&self) -> usize;
+  fn deg(&self, from: usize) -> usize;
+  fn arc(&self, from: usize, index: usize) -> (usize, &T);
+  fn each_adjacent(&self, from: usize, mut f: impl FnMut(usize, &T)) {
+    for i in 0 .. self.deg(from) {
+      let (v, w) = self.arc(from, i);
+      f(v, w);
+    }
+  }
+  fn add_arc(&mut self, from: usize, to: usize, weight: T);
+  fn add_edge(&mut self, u: usize, v: usize, weight: T) where T: Clone {
+    self.add_arc(u, v, weight.clone());
+    self.add_arc(v, u, weight);
+  }
+
+  fn add_arcs(&mut self, arcs: impl IntoIterator<Item = impl Arc<T>>) {
+    for arc in arcs {
+      let (u, v, w) = arc.into_tuple();
+      self.add_arc(u, v, w);
+    }
+  }
+  fn add_edges(&mut self, arcs: impl IntoIterator<Item = impl Arc<T>>) where T: Clone {
+    for arc in arcs {
+      let (u, v, w) = arc.into_tuple();
+      self.add_edge(u, v, w);
+    }
+  }
+
+  fn dfs_preorder(&self, start: usize, visited: &mut [bool], mut f: impl FnMut(usize, usize, &T) -> bool) {
+    visited[start] = true;
+    let mut stack = vec![(start, 0)];
+    while let Some((u, i)) = stack.pop() {
+      for j in i .. self.deg(u) {
+        let (v, w) = self.arc(u, j);
+        if !visited[v] && f(u, v, w) {
+          visited[v] = true;
+          if j + 1 < self.deg(u) {
+            stack.push((u, j + 1));
+          }
+          stack.push((v, 0));
+          break;
+        }
+      }
+    }
+  }
+
+  fn dijkstra<D>(&self, starts: &[usize], zero: D, inf: D, mut next_dist: impl FnMut(usize, &D, usize, &T) -> D) -> Vec<D> where D: Clone + Ord {
+    let mut dist = vec![inf; self.n()];
+    let mut pq = std::collections::BinaryHeap::new();
+    for &start in starts {
+      dist[start] = zero.clone();
+      pq.push((Reverse(zero.clone()), start));
+    }
+    while let Some((Reverse(d), u)) = pq.pop() {
+      if dist[u] < d {
+        continue;
+      }
+      self.each_adjacent(u, |v, w| {
+        let d2 = next_dist(u, &d, v, w);
+        if dist[v] > d2 {
+          dist[v] = d2.clone();
+          pq.push((Reverse(d2), v));
+        }
+      });
+    }
+    dist
+  }
+}
+impl AdjacentList<()> for Vec<Vec<usize>> {
+  fn n(&self) -> usize { self.len() }
+  fn deg(&self, from: usize) -> usize { self[from].len() }
+  fn arc(&self, from: usize, index: usize) -> (usize, &()) { (self[from][index], &()) }
+  fn add_arc(&mut self, from: usize, to: usize, _: ()) {
+    assert!(from < self.n() && to < self.n());
+    self[from].push(to);
+  }
+}
+impl<T> AdjacentList<T> for Vec<Vec<(usize, T)>> {
+  fn n(&self) -> usize {
+    self.len()
+  }
+  fn deg(&self, from: usize) -> usize { self[from].len() }
+  fn arc(&self, from: usize, index: usize) -> (usize, &T) {
+    let &(v, ref w) = &self[from][index];
+    (v, w)
+  }
+  fn add_arc(&mut self, from: usize, to: usize, weight: T) {
+    assert!(from < self.n() && to < self.n());
+    self[from].push((to, weight));
+  }
+}
+
+pub trait Arc<T> {
+  fn from(&self) -> usize;
+  fn to(&self) -> usize;
+  fn weight(&self) -> &T;
+  fn into_tuple(self) -> (usize, usize, T);
+}
+impl Arc<()> for (usize, usize) {
+  fn from(&self) -> usize { self.0 }
+  fn to(&self) -> usize { self.1 }
+  fn weight(&self) -> &() { &() }
+  fn into_tuple(self) -> (usize, usize, ()) { (self.0, self.1, ()) }
+}
+impl Arc<()> for &(usize, usize) {
+  fn from(&self) -> usize { self.0 }
+  fn to(&self) -> usize { self.1 }
+  fn weight(&self) -> &() { &() }
+  fn into_tuple(self) -> (usize, usize, ()) { (self.0, self.1, ()) }
+}
+impl<T> Arc<T> for (usize, usize, T) {
+  fn from(&self) -> usize { self.0 }
+  fn to(&self) -> usize { self.1 }
+  fn weight(&self) -> &T { &self.2 }
+  fn into_tuple(self) -> (usize, usize, T) { self }
+}
+impl<T> Arc<T> for &(usize, usize, T) where T: Clone {
+  fn from(&self) -> usize { self.0 }
+  fn to(&self) -> usize { self.1 }
+  fn weight(&self) -> &T { &self.2 }
+  fn into_tuple(self) -> (usize, usize, T) { self.clone() }
 }
