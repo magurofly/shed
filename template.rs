@@ -162,129 +162,175 @@ impl<M: ac_library::modint::ModIntBase> Factorial<M> {
   }
 }
 
-fn new_unweighted(n: usize) -> Vec<Vec<usize>> { vec![vec![]; n] }
-fn new_weighted<T>(n: usize) -> Vec<Vec<(usize, T)>> { (0 .. n).map(|_| vec![] ).collect() }
+use adjacent_list::{new_unweighted, new_weighted, AdjacentList};
+pub mod adjacent_list {
+  pub fn new_unweighted(n: usize) -> Vec<Vec<usize>> { vec![vec![]; n] }
+  pub fn new_weighted<T>(n: usize) -> Vec<Vec<(usize, T)>> { (0 .. n).map(|_| vec![] ).collect() }
 
-pub trait AdjacentList<T> {
-  fn n(&self) -> usize;
-  fn deg(&self, from: usize) -> usize;
-  fn arc(&self, from: usize, index: usize) -> (usize, &T);
-  fn each_adjacent(&self, from: usize, mut f: impl FnMut(usize, &T)) {
-    for i in 0 .. self.deg(from) {
-      let (v, w) = self.arc(from, i);
-      f(v, w);
+  pub trait AdjacentList {
+    type T;
+    fn n(&self) -> usize;
+    fn deg(&self, from: usize) -> usize;
+    fn arc(&self, from: usize, index: usize) -> (usize, &Self::T);
+    fn adjacents(&self, from: usize) -> Iter<'_, Self> {
+      Iter::new(self, from)
     }
-  }
-  fn add_arc(&mut self, from: usize, to: usize, weight: T);
-  fn add_edge(&mut self, u: usize, v: usize, weight: T) where T: Clone {
-    self.add_arc(u, v, weight.clone());
-    self.add_arc(v, u, weight);
-  }
+    fn add_arc(&mut self, from: usize, to: usize, weight: Self::T);
+    fn add_edge(&mut self, u: usize, v: usize, weight: Self::T) where Self::T: Clone {
+      self.add_arc(u, v, weight.clone());
+      self.add_arc(v, u, weight);
+    }
 
-  fn add_arcs(&mut self, arcs: impl IntoIterator<Item = impl Arc<T>>) {
-    for arc in arcs {
-      let (u, v, w) = arc.into_tuple();
-      self.add_arc(u, v, w);
+    fn add_arcs(&mut self, arcs: impl IntoIterator<Item = impl Arc<Self::T>>) {
+      for arc in arcs {
+        let (u, v, w) = arc.into_tuple();
+        self.add_arc(u, v, w);
+      }
     }
-  }
-  fn add_edges(&mut self, arcs: impl IntoIterator<Item = impl Arc<T>>) where T: Clone {
-    for arc in arcs {
-      let (u, v, w) = arc.into_tuple();
-      self.add_edge(u, v, w);
+    fn add_edges(&mut self, arcs: impl IntoIterator<Item = impl Arc<Self::T>>) where Self::T: Clone {
+      for arc in arcs {
+        let (u, v, w) = arc.into_tuple();
+        self.add_edge(u, v, w);
+      }
     }
-  }
 
-  fn dfs_preorder(&self, start: usize, visited: &mut [bool], mut f: impl FnMut(usize, usize, &T) -> bool) {
-    visited[start] = true;
-    let mut stack = vec![(start, 0)];
-    while let Some((u, i)) = stack.pop() {
-      for j in i .. self.deg(u) {
-        let (v, w) = self.arc(u, j);
-        if !visited[v] && f(u, v, w) {
-          visited[v] = true;
-          if j + 1 < self.deg(u) {
-            stack.push((u, j + 1));
+    fn dfs_preorder(&self, start: usize, visited: &mut [bool], mut f: impl FnMut(usize, usize, &Self::T) -> bool) {
+      visited[start] = true;
+      let mut stack = vec![(start, 0)];
+      while let Some((u, i)) = stack.pop() {
+        for j in i .. self.deg(u) {
+          let (v, w) = self.arc(u, j);
+          if !visited[v] && f(u, v, w) {
+            visited[v] = true;
+            if j + 1 < self.deg(u) {
+              stack.push((u, j + 1));
+            }
+            stack.push((v, 0));
+            break;
           }
-          stack.push((v, 0));
-          break;
         }
+      }
+    }
+
+    fn connected_components(&self) -> Vec<Vec<usize>> {
+      let mut components = vec![];
+      let mut visited = vec![false; self.n()];
+      for start in 0 .. self.n() {
+        if !visited[start] {
+          let mut component = vec![start];
+          self.dfs_preorder(start, &mut visited, |_, v, _| {
+            component.push(v);
+            true
+          });
+          components.push(component);
+        }
+      }
+      components
+    }
+
+    /// - `starts`: 始点（複数可）
+    /// - `zero`: 距離 $0$ の値
+    /// - `inf`: 距離 $∞$ の値
+    /// - `next_dist(d_u, u, v, w) = d_w`: 距離関数
+    fn dijkstra<D>(&self, starts: &[usize], zero: D, inf: D, mut next_dist: impl FnMut(&D, usize, usize, &Self::T) -> D) -> Vec<D> where D: Clone + Ord {
+      let mut dist = vec![inf; self.n()];
+      let mut pq = std::collections::BinaryHeap::new();
+      for &start in starts {
+        dist[start] = zero.clone();
+        pq.push((std::cmp::Reverse(zero.clone()), start));
+      }
+      while let Some((std::cmp::Reverse(d), u)) = pq.pop() {
+        if dist[u] < d {
+          continue;
+        }
+        for (v, w) in self.adjacents(u) {
+          let d2 = next_dist(&d, u, v, w);
+          if dist[v] > d2 {
+            dist[v] = d2.clone();
+            pq.push((std::cmp::Reverse(d2), v));
+          }
+        }
+      }
+      dist
+    }
+  }
+  impl AdjacentList for Vec<Vec<usize>> {
+    type T = ();
+    fn n(&self) -> usize { self.len() }
+    fn deg(&self, from: usize) -> usize { self[from].len() }
+    fn arc(&self, from: usize, index: usize) -> (usize, &()) { (self[from][index], &()) }
+    fn add_arc(&mut self, from: usize, to: usize, _: ()) {
+      assert!(from < self.n() && to < self.n());
+      self[from].push(to);
+    }
+  }
+  impl<T> AdjacentList for Vec<Vec<(usize, T)>> {
+    type T = T;
+    fn n(&self) -> usize {
+      self.len()
+    }
+    fn deg(&self, from: usize) -> usize { self[from].len() }
+    fn arc(&self, from: usize, index: usize) -> (usize, &T) {
+      let &(v, ref w) = &self[from][index];
+      (v, w)
+    }
+    fn add_arc(&mut self, from: usize, to: usize, weight: T) {
+      assert!(from < self.n() && to < self.n());
+      self[from].push((to, weight));
+    }
+  }
+
+  pub struct Iter<'a, G: ?Sized> {
+    graph: &'a G,
+    from: usize,
+    index: usize,
+  }
+  impl<'a, G: AdjacentList + ?Sized> Iter<'a, G> {
+    pub fn new(graph: &'a G, from: usize) -> Self {
+      Self { graph, from, index: 0 }
+    }
+  }
+  impl<'a, G: AdjacentList + ?Sized> Iterator for Iter<'a, G> {
+    type Item = (usize, &'a G::T);
+    fn next(&mut self) -> Option<Self::Item> {
+      if self.index < self.graph.deg(self.from) {
+        let item = self.graph.arc(self.from, self.index);
+        self.index += 1;
+        Some(item)
+      } else {
+        None
       }
     }
   }
 
-  fn dijkstra<D>(&self, starts: &[usize], zero: D, inf: D, mut next_dist: impl FnMut(usize, &D, usize, &T) -> D) -> Vec<D> where D: Clone + Ord {
-    let mut dist = vec![inf; self.n()];
-    let mut pq = std::collections::BinaryHeap::new();
-    for &start in starts {
-      dist[start] = zero.clone();
-      pq.push((Reverse(zero.clone()), start));
-    }
-    while let Some((Reverse(d), u)) = pq.pop() {
-      if dist[u] < d {
-        continue;
-      }
-      self.each_adjacent(u, |v, w| {
-        let d2 = next_dist(u, &d, v, w);
-        if dist[v] > d2 {
-          dist[v] = d2.clone();
-          pq.push((Reverse(d2), v));
-        }
-      });
-    }
-    dist
+  pub trait Arc<T> {
+    fn from(&self) -> usize;
+    fn to(&self) -> usize;
+    fn weight(&self) -> &T;
+    fn into_tuple(self) -> (usize, usize, T);
   }
-}
-impl AdjacentList<()> for Vec<Vec<usize>> {
-  fn n(&self) -> usize { self.len() }
-  fn deg(&self, from: usize) -> usize { self[from].len() }
-  fn arc(&self, from: usize, index: usize) -> (usize, &()) { (self[from][index], &()) }
-  fn add_arc(&mut self, from: usize, to: usize, _: ()) {
-    assert!(from < self.n() && to < self.n());
-    self[from].push(to);
+  impl Arc<()> for (usize, usize) {
+    fn from(&self) -> usize { self.0 }
+    fn to(&self) -> usize { self.1 }
+    fn weight(&self) -> &() { &() }
+    fn into_tuple(self) -> (usize, usize, ()) { (self.0, self.1, ()) }
   }
-}
-impl<T> AdjacentList<T> for Vec<Vec<(usize, T)>> {
-  fn n(&self) -> usize {
-    self.len()
+  impl Arc<()> for &(usize, usize) {
+    fn from(&self) -> usize { self.0 }
+    fn to(&self) -> usize { self.1 }
+    fn weight(&self) -> &() { &() }
+    fn into_tuple(self) -> (usize, usize, ()) { (self.0, self.1, ()) }
   }
-  fn deg(&self, from: usize) -> usize { self[from].len() }
-  fn arc(&self, from: usize, index: usize) -> (usize, &T) {
-    let &(v, ref w) = &self[from][index];
-    (v, w)
+  impl<T> Arc<T> for (usize, usize, T) {
+    fn from(&self) -> usize { self.0 }
+    fn to(&self) -> usize { self.1 }
+    fn weight(&self) -> &T { &self.2 }
+    fn into_tuple(self) -> (usize, usize, T) { self }
   }
-  fn add_arc(&mut self, from: usize, to: usize, weight: T) {
-    assert!(from < self.n() && to < self.n());
-    self[from].push((to, weight));
+  impl<T> Arc<T> for &(usize, usize, T) where T: Clone {
+    fn from(&self) -> usize { self.0 }
+    fn to(&self) -> usize { self.1 }
+    fn weight(&self) -> &T { &self.2 }
+    fn into_tuple(self) -> (usize, usize, T) { self.clone() }
   }
-}
-
-pub trait Arc<T> {
-  fn from(&self) -> usize;
-  fn to(&self) -> usize;
-  fn weight(&self) -> &T;
-  fn into_tuple(self) -> (usize, usize, T);
-}
-impl Arc<()> for (usize, usize) {
-  fn from(&self) -> usize { self.0 }
-  fn to(&self) -> usize { self.1 }
-  fn weight(&self) -> &() { &() }
-  fn into_tuple(self) -> (usize, usize, ()) { (self.0, self.1, ()) }
-}
-impl Arc<()> for &(usize, usize) {
-  fn from(&self) -> usize { self.0 }
-  fn to(&self) -> usize { self.1 }
-  fn weight(&self) -> &() { &() }
-  fn into_tuple(self) -> (usize, usize, ()) { (self.0, self.1, ()) }
-}
-impl<T> Arc<T> for (usize, usize, T) {
-  fn from(&self) -> usize { self.0 }
-  fn to(&self) -> usize { self.1 }
-  fn weight(&self) -> &T { &self.2 }
-  fn into_tuple(self) -> (usize, usize, T) { self }
-}
-impl<T> Arc<T> for &(usize, usize, T) where T: Clone {
-  fn from(&self) -> usize { self.0 }
-  fn to(&self) -> usize { self.1 }
-  fn weight(&self) -> &T { &self.2 }
-  fn into_tuple(self) -> (usize, usize, T) { self.clone() }
 }
