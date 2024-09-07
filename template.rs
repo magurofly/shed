@@ -2,9 +2,9 @@
 
 fn main() {
   input! {
-
+    
   }
-
+  
   
 }
 
@@ -119,31 +119,31 @@ pub struct Factorial<M: ac_library::modint::ModIntBase> {
 }
 impl<M: ac_library::modint::ModIntBase> Factorial<M> {
   pub fn new() -> Self { Self { fact: vec![M::from(1)], fact_inv: vec![M::from(1)] } }
-
+  
   pub fn fact(&mut self, n: usize) -> M { self.ensure(n); self.fact[n] }
-
+  
   pub fn fact_inv(&mut self, n: usize) -> M { self.ensure(n); self.fact_inv[n] }
-
+  
   /// 二項係数（組合せ）
   pub fn binom(&mut self, n: usize, r: usize) -> M {
     if r > n { return M::from(0); }
     self.ensure(n);
     self.fact[n] * self.fact_inv[n - r] * self.fact_inv[r]
   }
-
+  
   /// 順列
   pub fn perm(&mut self, n: usize, r: usize) -> M {
     if r > n { return M::from(0); }
     self.ensure(n);
     self.fact[n] * self.fact_inv[n - r]
   }
-
+  
   /// 重複組合せ
   pub fn homo(&mut self, n: usize, r: usize) -> M {
     if n + r == 0 { return M::from(1); }
     self.binom(n + r - 1, r)
   }
-
+  
   pub fn ensure(&mut self, n: usize) {
     if n < self.fact.len() {
       return;
@@ -166,7 +166,7 @@ use adjacent_list::{new_unweighted, new_weighted, AdjacentList};
 pub mod adjacent_list {
   pub fn new_unweighted(n: usize) -> Vec<Vec<usize>> { vec![vec![]; n] }
   pub fn new_weighted<T>(n: usize) -> Vec<Vec<(usize, T)>> { (0 .. n).map(|_| vec![] ).collect() }
-
+  
   pub trait AdjacentList {
     type T;
     fn n(&self) -> usize;
@@ -180,7 +180,7 @@ pub mod adjacent_list {
       self.add_arc(u, v, weight.clone());
       self.add_arc(v, u, weight);
     }
-
+    
     fn add_arcs(&mut self, arcs: impl IntoIterator<Item = impl Arc<Self::T>>) {
       for arc in arcs {
         let (u, v, w) = arc.into_tuple();
@@ -193,7 +193,7 @@ pub mod adjacent_list {
         self.add_edge(u, v, w);
       }
     }
-
+    
     fn dfs_preorder(&self, start: usize, visited: &mut [bool], mut f: impl FnMut(usize, usize, &Self::T) -> bool) {
       visited[start] = true;
       let mut stack = vec![(start, 0)];
@@ -211,7 +211,7 @@ pub mod adjacent_list {
         }
       }
     }
-
+    
     fn connected_components(&self) -> Vec<Vec<usize>> {
       let mut components = vec![];
       let mut visited = vec![false; self.n()];
@@ -227,7 +227,7 @@ pub mod adjacent_list {
       }
       components
     }
-
+    
     /// - `starts`: 始点（複数可）
     /// - `zero`: 距離 $0$ の値
     /// - `inf`: 距離 $∞$ の値
@@ -279,7 +279,7 @@ pub mod adjacent_list {
       self[from].push((to, weight));
     }
   }
-
+  
   pub struct Iter<'a, G: ?Sized> {
     graph: &'a G,
     from: usize,
@@ -302,7 +302,7 @@ pub mod adjacent_list {
       }
     }
   }
-
+  
   pub trait Arc<T> {
     fn from(&self) -> usize;
     fn to(&self) -> usize;
@@ -332,5 +332,178 @@ pub mod adjacent_list {
     fn to(&self) -> usize { self.1 }
     fn weight(&self) -> &T { &self.2 }
     fn into_tuple(self) -> (usize, usize, T) { self.clone() }
+  }
+}
+
+use rolling_hash::{ModIntM61, RollingHash};
+pub mod rolling_hash {
+  use std::{ops::*, cell::*, thread_local};
+  use rand::prelude::*;
+  
+  pub const MOD: u64 = (1 << 61) - 1;
+  
+  thread_local! {
+    static BASE: Cell<ModIntM61> = Cell::new(ModIntM61::from(0));
+    static POW: UnsafeCell<Vec<ModIntM61>> = UnsafeCell::new(vec![ModIntM61::from(1)]);
+    static POW_INV: UnsafeCell<Vec<ModIntM61>> = UnsafeCell::new(vec![ModIntM61::from(1)]);
+  }
+  
+  const POW_THRESH: usize = 10_000_000;
+  
+  #[inline]
+  fn add(x: u64, y: u64) -> u64 { let mut z = x + y; if z >= MOD { z -= MOD; } z }
+  
+  #[inline]
+  fn sub(x: u64, y: u64) -> u64 { if x < y { x + MOD - y } else { x - y } }
+  
+  #[inline]
+  fn mul(x: u64, y: u64) -> u64 {
+    let (x0, x31) = (x & ((1 << 31) - 1), x >> 31);
+    let (y0, y31) = (y & ((1 << 31) - 1), y >> 31);
+    let t31 = x0 * y31 + x31 * y0;
+    let (u0, u31) = (t31 >> 30, t31 & ((1 << 30) - 1));
+    let r = x0 * y0 + (x31 * y31 << 1) + u0 + (u31 << 31);
+    add(r & ((1 << 61) - 1), r >> 61)
+  }
+  
+  fn pow(mut x: u64, mut y: u64) -> u64 {
+    let mut r = 1;
+    while y > 0 {
+      if y & 1 == 1 {
+        r = mul(r, x);
+      }
+      x = mul(x, x);
+      y >>= 1;
+    }
+    r
+  }
+  
+  #[inline]
+  fn inv(x: u64) -> u64 { pow(x, MOD - 2) }
+  
+  #[inline]
+  fn rem(x: u64) -> u64 { add(x & MOD, x >> 61) }
+  
+  #[derive(Clone, Copy, Debug, Hash)]
+  pub struct ModIntM61(u64);
+  impl ModIntM61 {
+    pub fn raw(x: u64) -> Self { debug_assert!(x < MOD); Self(x) }
+    pub fn value(self) -> u64 { self.0 }
+    pub fn pow(self, e: u64) -> Self { Self(pow(self.0, e)) }
+    pub fn inv(self) -> Self { Self(inv(self.0)) }
+  }
+  
+  macro_rules! impl_from {
+    (|$x:ident : $T:ty| { $y:expr }) => {
+      impl From<$T> for ModIntM61 {
+        fn from($x: $T) -> Self { Self($y) }
+      }
+    }
+  }
+  impl_from!(|x: char| { x as u64 });
+  impl_from!(|x: u8| { x as u64 });
+  impl_from!(|x: u16| { x as u64 });
+  impl_from!(|x: u32| { x as u64 });
+  impl_from!(|x: u64| { rem(x) });
+  impl_from!(|x: u128| { (x % MOD as u128) as u64 });
+  impl_from!(|x: i8| { if x < 0 { MOD - (-x) as u64 } else { x as u64 } });
+  impl_from!(|x: i16| { if x < 0 { MOD - (-x) as u64 } else { x as u64 } });
+  impl_from!(|x: i32| { if x < 0 { MOD - (-x) as u64 } else { x as u64 } });
+  impl_from!(|x: i64| { x.rem_euclid(MOD as i64) as u64 });
+  impl_from!(|x: i128| { x.rem_euclid(MOD as i128) as u64 });
+  
+  impl std::str::FromStr for ModIntM61 {
+    type Err = <i64 as std::str::FromStr>::Err;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { i64::from_str(s).map(Self::from) }
+  }
+  
+  impl std::fmt::Display for ModIntM61 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_fmt(format_args!("{}", self.0)) }
+  }
+  
+  impl<T: Into<ModIntM61>> Add<T> for ModIntM61 {
+    type Output = Self;
+    fn add(self, rhs: T) -> Self::Output { Self(add(self.0, rhs.into().0)) }
+  }
+  impl<T: Into<ModIntM61>> Sub<T> for ModIntM61 {
+    type Output = Self;
+    fn sub(self, rhs: T) -> Self::Output { Self(sub(self.0, rhs.into().0)) }
+  }
+  impl<T: Into<ModIntM61>> Mul<T> for ModIntM61 {
+    type Output = Self;
+    fn mul(self, rhs: T) -> Self::Output { Self(mul(self.0, rhs.into().0)) }
+  }
+  impl<T: Into<ModIntM61>> Div<T> for ModIntM61 {
+    type Output = Self;
+    fn div(self, rhs: T) -> Self::Output { Self(mul(self.0, inv(rhs.into().0))) }
+  }
+  impl<T: Copy + Into<ModIntM61>> PartialEq<T> for ModIntM61 {
+    fn eq(&self, other: &T) -> bool { self.0 == (*other).into().0 }
+  }
+  impl Eq for ModIntM61 {}
+  
+  fn base() -> ModIntM61 {
+    BASE.with(|base| {
+      while base.get() == 0 {
+        base.set(ModIntM61::from(thread_rng().next_u64()));
+      }
+      base.get()
+    })
+  }
+  
+  fn cell_pow(cell: &UnsafeCell<Vec<ModIntM61>>, n: usize) -> ModIntM61 {
+    let pow = unsafe { &mut *cell.get() };
+    if n as usize >= pow.len() {
+      let next_len = (n + 1).next_power_of_two() as usize;
+      let base = base();
+      for i in pow.len() .. next_len {
+        pow.push(pow[i - 1] * base);
+      }
+    }
+    pow[n as usize]
+  }
+  
+  fn base_pow(n: usize) -> ModIntM61 {
+    if n < POW_THRESH {
+      POW.with(|cell| cell_pow(cell, n) )
+    } else {
+      base().pow(n as u64)
+    }
+  }
+  
+  fn base_inv_pow(n: usize) -> ModIntM61 {
+    if n < POW_THRESH {
+      POW_INV.with(|cell| cell_pow(cell, n) )
+    } else {
+      base().pow((-(n as i128)).rem_euclid(MOD as i128 - 2) as u64)
+    }
+  }
+  
+  #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+  pub struct RollingHash {
+    value: ModIntM61,
+    len: usize,
+  }
+  impl RollingHash {
+    pub fn empty() -> Self { Self { value: ModIntM61::from(0), len: 0 } }
+    pub fn new(value: ModIntM61, len: usize) -> Self { Self { value, len } }
+    pub fn value(self) -> ModIntM61 { self.value }
+    pub fn len(self) -> usize { self.len }
+    pub fn concat(self, rhs: Self) -> Self { Self::new(self.value * base_pow(rhs.len) + rhs.value, self.len + rhs.len) }
+    pub fn remove_prefix(self, prefix: Self) -> Self { Self::new(self.value - prefix.value * base_pow(self.len - prefix.len), self.len - prefix.len) }
+    pub fn remove_suffix(self, suffix: Self) -> Self { Self::new((self.value - suffix.value) * base_inv_pow(suffix.len), self.len - suffix.len) }
+  }
+  
+  impl<T: Into<ModIntM61>> std::iter::FromIterator<T> for RollingHash {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+      let mut value = ModIntM61::from(0);
+      let mut len = 0;
+      let base = base();
+      for x in iter {
+        value = value * base + x.into();
+        len += 1;
+      }
+      Self::new(value, len)
+    }
   }
 }
