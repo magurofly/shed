@@ -3,8 +3,8 @@
 fn main() {
   input! {
   }
-
   
+
 }
 
 type Int = i64;
@@ -478,7 +478,7 @@ pub mod rolling_hash {
     }
   }
   
-  #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+  #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
   pub struct RollingHash {
     value: ModIntM61,
     len: usize,
@@ -511,11 +511,11 @@ pub mod rolling_hash {
     prefixes: Vec<ModIntM61>,
   }
   impl RollingHashedString {
-    pub fn slice(&self, range: impl std::ops::RangeBounds<usize>) -> ModIntM61 {
+    pub fn slice(&self, range: impl std::ops::RangeBounds<usize>) -> RollingHash {
       use std::ops::Bound::*;
       let l = match range.start_bound() { Included(&l) => l, Excluded(&l) => l + 1, Unbounded => 0 };
       let r = match range.end_bound() { Included(&r) => r + 1, Excluded(&r) => r, Unbounded => self.len() };
-      self.prefixes[r] - self.prefixes[l] * base_pow(r - l)
+      RollingHash::new(self.prefixes[r] - self.prefixes[l] * base_pow(r - l), r - l)
     }
 
     pub fn len(&self) -> usize { self.prefixes.len() - 1 }
