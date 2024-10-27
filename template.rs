@@ -2,9 +2,8 @@
 
 fn main() {
   input! {
-    
   }
-  
+
   
 }
 
@@ -335,7 +334,7 @@ pub mod adjacent_list {
   }
 }
 
-use rolling_hash::{ModIntM61, RollingHash};
+use rolling_hash::{ModIntM61, RollingHash, RollingHashedString};
 pub mod rolling_hash {
   use std::{ops::*, cell::*, thread_local};
   use rand::prelude::*;
@@ -504,6 +503,35 @@ pub mod rolling_hash {
         len += 1;
       }
       Self::new(value, len)
+    }
+  }
+
+  #[derive(Debug, Clone)]
+  pub struct RollingHashedString {
+    prefixes: Vec<ModIntM61>,
+  }
+  impl RollingHashedString {
+    pub fn slice(&self, range: impl std::ops::RangeBounds<usize>) -> ModIntM61 {
+      use std::ops::Bound::*;
+      let l = match range.start_bound() { Included(&l) => l, Excluded(&l) => l + 1, Unbounded => 0 };
+      let r = match range.end_bound() { Included(&r) => r + 1, Excluded(&r) => r, Unbounded => self.len() };
+      self.prefixes[r] - self.prefixes[l] * base_pow(r - l)
+    }
+
+    pub fn len(&self) -> usize { self.prefixes.len() - 1 }
+  }
+  impl<T: Into<ModIntM61>> std::iter::FromIterator<T> for RollingHashedString {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+      let values = iter.into_iter();
+      let mut prefixes = Vec::with_capacity(values.size_hint().0 + 1);
+      let mut hash = ModIntM61::from(0);
+      prefixes.push(hash);
+      let base = base();
+      for value in values {
+        hash = hash * base + value;
+        prefixes.push(hash);
+      }
+      Self { prefixes }
     }
   }
 }
