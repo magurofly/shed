@@ -34,7 +34,7 @@ trait MyItertools : Iterator + Sized {
   fn to_vec(self) -> Vec<Self::Item> { self.collect::<Vec<_>>() }
   fn to_vec_rev(self) -> Vec<Self::Item> { let mut v = self.collect::<Vec<_>>(); v.reverse(); v }
   fn tally(self) -> HashMap<Self::Item, usize> where Self::Item: Copy + Eq + hash::Hash { let mut counts = HashMap::new(); self.for_each(|item| *counts.entry(item).or_default() += 1 ); counts }
-  fn count_if<P: Fn(&Self::Item) -> bool>(self, predicate: P) -> usize { self.filter(predicate).count() }
+  fn count_if<P: Fn(Self::Item) -> bool>(self, predicate: P) -> usize { self.map(predicate).filter(|&x| x ).count() }
   fn implode(self, sep: &str) -> String where Self::Item: std::string::ToString { self.map(|x| x.to_string()).to_vec().join(sep) }
   fn mex(self, gen: impl IntoIterator<Item = Self::Item>) -> Self::Item where Self::Item: Ord { let mut v = self.collect::<Vec<_>>(); v.sort(); v.dedup(); let mut it = v.into_iter(); gen.into_iter().find(|a| if let Some(x) = it.next() { a != &x } else { true }).unwrap() }
 }
@@ -71,6 +71,29 @@ trait MyPrimInt : PrimInt {
   fn digits(mut self, base: Self) -> Vec<Self> { assert!(base > Self::zero()); let mut d = vec![]; while self != Self::zero() { d.push(self % base); self = self / base; } d.reverse(); if d.is_empty() { d.push(Self::zero()); }; d }
 }
 impl<T: PrimInt> MyPrimInt for T {}
+
+trait MyRangeBounds<T> : RangeBounds<T> {
+  /// 単調性を持つ条件を与えたとき、区間に含まれる点のうち、条件を満たす最小の点を求める。
+  /// そのような点が存在しなければ `None` を返す。
+  fn lower_bound(&self, mut f: impl FnMut(T) -> bool) -> Option<T> where T: PrimInt + Bounded {
+    use std::ops::Bound::*;
+    let mut min = match self.start_bound() { Included(&l) => l, Excluded(&l) => l + T::one(), Unbounded => T::min_value() };
+    let mut max = match self.end_bound() { Included(&r) => r, Excluded(&r) => r - T::one(), Unbounded => T::max_value() };
+    if min > max || !f(max) {
+      return None;
+    }
+    while min < max {
+      let mid = min + ((max - min) >> 1);
+      if f(mid) {
+        max = mid;
+      } else {
+        min = mid + T::one();
+      }
+    }
+    Some(min)
+  }
+}
+impl<T, R: RangeBounds<T>> MyRangeBounds<T> for R {}
 
 #[derive(Debug, Clone, Default)]
 pub struct BTreeMultiset<T: Ord> { len: usize, set: BTreeMap<T, usize> }
@@ -535,3 +558,4 @@ pub mod rolling_hash {
     }
   }
 }
+
