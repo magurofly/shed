@@ -1,17 +1,20 @@
-#![allow(dead_code, unused_imports, unused_macros, non_snake_case)]
+#![allow(dead_code, unused_imports, unused_macros, non_snake_case, non_camel_case_types)]
 
 fn main() {
   input! {
+    
   }
-  
 
 }
 
-type Int = i64;
-const MOD: Int = 998244353;
-// const MOD: Int = 1_000_000_007;
-const INF: Int = 1_000_000_000_000_000_000;
-const YESNO: [&'static str; 2] = ["Yes", "No"];
+type mint = ModInt998244353;
+// type mint = ModInt1000000007;
+const YES: &'static str = "YES";
+const NO: &'static str = "NO";
+type ll = i64;
+type us = usize;
+type us1 = Usize1;
+const INF: ll = 1_000_000_000_000_000_000;
 
 use proconio::{input, input_interactive, marker::{Chars, Bytes, Usize1}};
 use std::*;
@@ -21,12 +24,13 @@ use cmp::{self, Reverse}; // cmp::{min, max}
 use itertools::*;
 use num_traits::*;
 use num_integer::*;
+use num_derive::*;
 use permutohedron::*;
-use ac_library::*; type Mint = ModInt998244353;
+use ac_library::*;
 
-fn yes() { println!("{}", YESNO[0]); }
-fn no() { println!("{}", YESNO[1]); }
-fn yesno(c: bool) { println!("{}", if c { YESNO[0] } else { YESNO[1] }); }
+fn yes() { println!("{YES}"); }
+fn no() { println!("{NO}"); }
+fn yesno(c: bool) { println!("{}", if c { YES } else { NO }); }
 fn say<T: std::fmt::Display>(x: T) -> T { println!("{}", x); x }
 fn neighbor4<F: FnMut(usize, usize)>(i: usize, j: usize, h: usize, w: usize, mut f: F) { if i > 0 { (f)(i - 1, j); } if i < h - 1 { (f)(i + 1, j); } if j > 0 { (f)(i, j - 1); } if j < w - 1 { (f)(i, j + 1); } }
 
@@ -112,9 +116,9 @@ impl<'a, T: Ord> BTreeMultiset<T> {
 }
 
 #[derive(Clone, Debug)]
-pub struct RectangleSum { imos: Vec<Vec<i64>>, h: usize, w: usize }
+pub struct RectangleSum { imos: Vec<Vec<ll>>, h: usize, w: usize }
 impl RectangleSum {
-  pub fn new(data: &[Vec<i64>]) -> Self {
+  pub fn new(data: &[Vec<ll>]) -> Self {
     let h = data.len();
     let w = data[0].len();
     let mut imos = vec![vec![0; w + 1]; h + 1];
@@ -125,7 +129,7 @@ impl RectangleSum {
     Self { imos, h, w }
   }
   
-  pub fn sum(&self, i: impl std::ops::RangeBounds<usize>, j: impl std::ops::RangeBounds<usize>) -> i64 {
+  pub fn sum(&self, i: impl std::ops::RangeBounds<usize>, j: impl std::ops::RangeBounds<usize>) -> ll {
     use std::ops::Bound::*;
     let i0 = match i.start_bound() { Included(&i) => i, Excluded(&i) => i + 1, Unbounded => 0 };
     let i1 = match i.end_bound() { Included(&i) => i + 1, Excluded(&i) => i, Unbounded => self.h };
