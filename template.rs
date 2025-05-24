@@ -9,15 +9,15 @@ fn main() {
 
 type mint = ModInt998244353;
 // type mint = ModInt1000000007;
-const YES: &'static str = "YES";
-const NO: &'static str = "NO";
+const YES: &'static str = "Yes";
+const NO: &'static str = "No";
 type ll = i64;
 type us = usize;
 type us1 = Usize1;
 const INF: ll = 1_000_000_000_000_000_000;
 
 use proconio::{input, input_interactive, marker::{Chars, Bytes, Usize1}};
-use std::*;
+use std::{marker::PhantomData, *};
 use std::ops::*;
 use collections::*; // (BTree|Hash)(Set|Map), BinaryHeap, VecDeque, LinkedList
 use cmp::{self, Reverse}; // cmp::{min, max}
@@ -33,6 +33,40 @@ fn no() { println!("{NO}"); }
 fn yesno(c: bool) { println!("{}", if c { YES } else { NO }); }
 fn say<T: std::fmt::Display>(x: T) -> T { println!("{}", x); x }
 fn neighbor4<F: FnMut(usize, usize)>(i: usize, j: usize, h: usize, w: usize, mut f: F) { if i > 0 { (f)(i - 1, j); } if i < h - 1 { (f)(i + 1, j); } if j > 0 { (f)(i, j - 1); } if j < w - 1 { (f)(i, j + 1); } }
+fn mint(x: impl Sized + Into<mint>) -> mint { x.into() }
+
+struct MaxMonoid<S>(PhantomData<S>);
+impl<S: Copy + PartialOrd + num_traits::bounds::LowerBounded> Monoid for MaxMonoid<S> {
+    type S = S;
+    fn binary_operation(&a: &Self::S, &b: &Self::S) -> Self::S {
+        if a >= b { a } else { b }
+    }
+    fn identity() -> Self::S {
+        S::min_value()
+    }
+}
+
+struct MinMonoid<S>(PhantomData<S>);
+impl<S: Copy + PartialOrd + num_traits::bounds::UpperBounded> Monoid for MinMonoid<S> {
+    type S = S;
+    fn binary_operation(&a: &Self::S, &b: &Self::S) -> Self::S {
+        if a <= b { a } else { b }
+    }
+    fn identity() -> Self::S {
+        S::max_value()
+    }
+}
+
+struct SumMonoid<S>(PhantomData<S>);
+impl<S: Copy + Zero + Add<Output = S>> Monoid for SumMonoid<S> {
+    type S = S;
+    fn binary_operation(&a: &Self::S, &b: &Self::S) -> Self::S {
+        a + b
+    }
+    fn identity() -> Self::S {
+        S::zero()
+    }
+}
 
 trait MyItertools : Iterator + Sized {
   fn to_vec(self) -> Vec<Self::Item> { self.collect::<Vec<_>>() }
@@ -77,24 +111,64 @@ trait MyPrimInt : PrimInt {
 impl<T: PrimInt> MyPrimInt for T {}
 
 trait MyRangeBounds<T> : RangeBounds<T> {
-  /// 単調性を持つ条件を与えたとき、区間に含まれる点のうち、条件を満たす最小の点を求める。
-  /// そのような点が存在しなければ `None` を返す。
-  fn lower_bound(&self, mut f: impl FnMut(T) -> bool) -> Option<T> where T: PrimInt + Bounded {
+  fn min(&self) -> T where T: PrimInt + Bounded {
     use std::ops::Bound::*;
-    let mut min = match self.start_bound() { Included(&l) => l, Excluded(&l) => l + T::one(), Unbounded => T::min_value() };
-    let mut max = match self.end_bound() { Included(&r) => r, Excluded(&r) => r - T::one(), Unbounded => T::max_value() };
-    if min > max || !f(max) {
-      return None;
+    match self.start_bound() {
+      Included(&l) => l,
+      Excluded(&l) => l + T::one(),
+      Unbounded => T::min_value(),
     }
-    while min < max {
-      let mid = min + ((max - min) >> 1);
+  }
+
+  fn max(&self) -> T where T: PrimInt + Bounded {
+    use std::ops::Bound::*;
+    match self.start_bound() {
+      Included(&r) => r,
+      Excluded(&r) => r - T::one(),
+      Unbounded => T::max_value(),
+    }
+  }
+
+  fn sup(&self) -> T where T: PrimInt + Bounded {
+    use std::ops::Bound::*;
+    match self.start_bound() {
+      Included(&r) => r + T::one(),
+      Excluded(&r) => r,
+      Unbounded => T::max_value(), // saturate
+    }
+  }
+
+  /// 単調性を持つ条件を与えたとき、区間に含まれる点のうち、条件を満たさない最小の点を求める。
+  /// そのような点が存在しなければ、区間の右端（Excluded）を返す
+  fn partition_point(&self, mut f: impl FnMut(T) -> bool) -> T where T: PrimInt + Bounded {
+    use std::ops::Bound::*;
+    let mut max = self.min();
+    let mut sup = self.sup();
+    if max > sup {
+      return sup;
+    }
+    loop {
+      let width = sup.saturating_sub(max);
+      if width <= T::one() {
+        break;
+      }
+      let mid = max.saturating_add(width >> 1);
       if f(mid) {
         max = mid;
       } else {
-        min = mid + T::one();
+        sup = mid;
       }
     }
-    Some(min)
+    sup
+  }
+
+  fn bsearch_max(&self, mut f: impl FnMut(T) -> bool) -> Option<T> where T: PrimInt + Bounded {
+    let ans = self.partition_point(&mut f) - T::one();
+    if f(ans) {
+      Some(ans)
+    } else {
+      None
+    }
   }
 }
 impl<T, R: RangeBounds<T>> MyRangeBounds<T> for R {}
@@ -188,19 +262,18 @@ impl<M: ac_library::modint::ModIntBase> Factorial<M> {
   }
 }
 
-use adjacent_list::{new_unweighted, new_weighted, AdjacentList};
+use adjacent_list::{new_unweighted, new_weighted, AdjacentList, HeavyLightDecomposition};
 pub mod adjacent_list {
   pub fn new_unweighted(n: usize) -> Vec<Vec<usize>> { vec![vec![]; n] }
   pub fn new_weighted<T>(n: usize) -> Vec<Vec<(usize, T)>> { (0 .. n).map(|_| vec![] ).collect() }
   
   pub trait AdjacentList {
     type T;
+    type E: ArcTo<Self::T>;
     fn n(&self) -> usize;
     fn deg(&self, from: usize) -> usize;
-    fn arc(&self, from: usize, index: usize) -> (usize, &Self::T);
-    fn adjacents(&self, from: usize) -> Iter<'_, Self> {
-      Iter::new(self, from)
-    }
+    fn arc(&self, from: usize, index: usize) -> &Self::E;
+    fn adjacents(&self, from: usize) -> std::slice::Iter<'_, Self::E>;
     fn add_arc(&mut self, from: usize, to: usize, weight: Self::T);
     fn add_edge(&mut self, u: usize, v: usize, weight: Self::T) where Self::T: Clone {
       self.add_arc(u, v, weight.clone());
@@ -213,25 +286,27 @@ pub mod adjacent_list {
         self.add_arc(u, v, w);
       }
     }
-    fn add_edges(&mut self, arcs: impl IntoIterator<Item = impl Arc<Self::T>>) where Self::T: Clone {
-      for arc in arcs {
-        let (u, v, w) = arc.into_tuple();
+    fn add_edges(&mut self, edges: impl IntoIterator<Item = impl Arc<Self::T>>) where Self::T: Clone {
+      for edge in edges {
+        let (u, v, w) = edge.into_tuple();
         self.add_edge(u, v, w);
       }
     }
+
+    fn arcs_mut(&mut self, from: usize) -> &mut [Self::E];
     
-    fn dfs_preorder(&self, start: usize, visited: &mut [bool], mut f: impl FnMut(usize, usize, &Self::T) -> bool) {
+    fn dfs_preorder(&self, start: usize, visited: &mut [bool], mut f: impl FnMut(usize, &Self::E) -> bool) {
       visited[start] = true;
       let mut stack = vec![(start, 0)];
       while let Some((u, i)) = stack.pop() {
         for j in i .. self.deg(u) {
-          let (v, w) = self.arc(u, j);
-          if !visited[v] && f(u, v, w) {
-            visited[v] = true;
+          let e = self.arc(u, j);
+          if !visited[e.to()] && f(u, e) {
+            visited[e.to()] = true;
             if j + 1 < self.deg(u) {
               stack.push((u, j + 1));
             }
-            stack.push((v, 0));
+            stack.push((e.to(), 0));
             break;
           }
         }
@@ -244,8 +319,8 @@ pub mod adjacent_list {
       for start in 0 .. self.n() {
         if !visited[start] {
           let mut component = vec![start];
-          self.dfs_preorder(start, &mut visited, |_, v, _| {
-            component.push(v);
+          self.dfs_preorder(start, &mut visited, |_, e| {
+            component.push(e.to());
             true
           });
           components.push(component);
@@ -258,7 +333,7 @@ pub mod adjacent_list {
     /// - `zero`: 距離 $0$ の値
     /// - `inf`: 距離 $∞$ の値
     /// - `next_dist(d_u, u, v, w) = d_w`: 距離関数
-    fn dijkstra<D>(&self, starts: &[usize], zero: D, inf: D, mut next_dist: impl FnMut(&D, usize, usize, &Self::T) -> D) -> Vec<D> where D: Clone + Ord {
+    fn dijkstra<D>(&self, starts: &[usize], zero: D, inf: D, mut next_dist: impl FnMut(&D, usize, &Self::E) -> D) -> Vec<D> where D: Clone + Ord {
       let mut dist = vec![inf; self.n()];
       let mut pq = std::collections::BinaryHeap::new();
       for &start in starts {
@@ -269,40 +344,53 @@ pub mod adjacent_list {
         if dist[u] < d {
           continue;
         }
-        for (v, w) in self.adjacents(u) {
-          let d2 = next_dist(&d, u, v, w);
-          if dist[v] > d2 {
-            dist[v] = d2.clone();
-            pq.push((std::cmp::Reverse(d2), v));
+        for e in self.adjacents(u) {
+          let d2 = next_dist(&d, u, e);
+          if dist[e.to()] > d2 {
+            dist[e.to()] = d2.clone();
+            pq.push((std::cmp::Reverse(d2), e.to()));
           }
         }
       }
       dist
     }
+
+    fn euler_tour(&self, root: usize) -> EulerTour {
+      EulerTour::new(self, root)
+    }
   }
   impl AdjacentList for Vec<Vec<usize>> {
     type T = ();
+    type E = usize;
     fn n(&self) -> usize { self.len() }
     fn deg(&self, from: usize) -> usize { self[from].len() }
-    fn arc(&self, from: usize, index: usize) -> (usize, &()) { (self[from][index], &()) }
+    fn arc(&self, from: usize, index: usize) -> &usize { &self[from][index] }
+    fn arcs_mut(&mut self, from: usize) -> &mut [Self::E] { &mut self[from] }
     fn add_arc(&mut self, from: usize, to: usize, _: ()) {
       assert!(from < self.n() && to < self.n());
       self[from].push(to);
     }
+    fn adjacents(&self, from: usize) -> std::slice::Iter<'_, usize> {
+      self[from].iter()
+    }
   }
   impl<T> AdjacentList for Vec<Vec<(usize, T)>> {
     type T = T;
+    type E = (usize, T);
     fn n(&self) -> usize {
       self.len()
     }
     fn deg(&self, from: usize) -> usize { self[from].len() }
-    fn arc(&self, from: usize, index: usize) -> (usize, &T) {
-      let &(v, ref w) = &self[from][index];
-      (v, w)
+    fn arc(&self, from: usize, index: usize) -> &(usize, T) {
+      &self[from][index]
     }
+    fn arcs_mut(&mut self, from: usize) -> &mut [Self::E] { &mut self[from] }
     fn add_arc(&mut self, from: usize, to: usize, weight: T) {
       assert!(from < self.n() && to < self.n());
       self[from].push((to, weight));
+    }
+    fn adjacents(&self, from: usize) -> std::slice::Iter<'_, Self::E> {
+      self[from].iter()
     }
   }
   
@@ -317,7 +405,7 @@ pub mod adjacent_list {
     }
   }
   impl<'a, G: AdjacentList + ?Sized> Iterator for Iter<'a, G> {
-    type Item = (usize, &'a G::T);
+    type Item = &'a G::E;
     fn next(&mut self) -> Option<Self::Item> {
       if self.index < self.graph.deg(self.from) {
         let item = self.graph.arc(self.from, self.index);
@@ -359,9 +447,135 @@ pub mod adjacent_list {
     fn weight(&self) -> &T { &self.2 }
     fn into_tuple(self) -> (usize, usize, T) { self.clone() }
   }
+
+  pub trait ArcTo<T> {
+    fn to(&self) -> usize;
+    fn weight(&self) -> &T;
+  }
+  impl ArcTo<()> for usize {
+    fn to(&self) -> usize { *self }
+    fn weight(&self) -> &() { &() }
+  }
+  impl<T> ArcTo<T> for (usize, T) {
+    fn to(&self) -> usize { self.0 }
+    fn weight(&self) -> &T { &self.1 }
+  }
+
+  #[derive(Clone, Debug)]
+  pub struct EulerTour {
+    pub depth: Vec<usize>,
+    pub preorder: Vec<usize>,
+    pub postorder: Vec<usize>,
+    pub time_in: Vec<usize>,
+    pub time_out: Vec<usize>,
+  }
+  impl EulerTour {
+    pub fn new<G: AdjacentList + ?Sized>(graph: &G, root: usize) -> Self {
+      let mut this = Self {
+        depth: vec![graph.n(); graph.n()],
+        preorder: Vec::with_capacity(graph.n()),
+        postorder: Vec::with_capacity(graph.n()),
+        time_in: vec![graph.n(); graph.n()],
+        time_out: vec![0; graph.n()],
+      };
+      this.depth[root] = 0;
+      this.dfs(graph, root);
+      this
+    }
+
+    fn dfs<G: AdjacentList + ?Sized>(&mut self, graph: &G, u: usize) {
+      self.time_in[u] = self.preorder.len();
+      self.preorder.push(u);
+      for e in graph.adjacents(u) {
+        if self.depth[e.to()] == graph.n() {
+          self.depth[e.to()] = self.depth[u] + 1;
+          self.dfs(graph, e.to());
+        }
+      }
+      self.postorder.push(u);
+      self.time_out[u] = self.preorder.len();
+    }
+  }
+
+  #[derive(Clone, Debug, Default)]
+  pub struct HeavyLightDecomposition {
+    /// 頂点 v を根とする部分木のサイズ
+    pub subtree_size: Vec<usize>,
+    /// 頂点 v を最初に訪問した時間
+    pub time_in: Vec<usize>,
+    /// 頂点 v を最後に離れた時間
+    pub time_out: Vec<usize>,
+    /// 最後の時間
+    pub time: usize,
+    /// time_in[v] の昇順でソートされた頂点番号の配列
+    pub ordered: Vec<usize>,
+    /// 頂点 v が属するパスの番号
+    pub path_id: Vec<usize>,
+    /// 頂点 v が属するパスのうちでのインデックス
+    pub path_index: Vec<usize>,
+    /// パスの配列
+    pub paths: Vec<Vec<usize>>,
+  }
+  impl HeavyLightDecomposition {
+    pub fn new(graph: &mut impl AdjacentList, root: usize) -> Self {
+      let mut this = Self {
+        subtree_size: vec![1; graph.n()],
+        time_in: vec![0; graph.n()],
+        time_out: vec![0; graph.n()],
+        time: 0,
+        ordered: (0 .. graph.n()).collect(),
+        path_id: vec![0; graph.n()],
+        path_index: vec![0; graph.n()],
+        paths: vec![vec![]],
+      };
+      this.dfs_size(graph, root, root);
+      this.dfs_hld(graph, root, root);
+      let time_in = &this.time_in;
+      this.ordered.sort_by_key(|&v| time_in[v] );
+      this
+    }
+
+    fn dfs_size(&mut self, graph: &mut impl AdjacentList, u: usize, p: usize) {
+      for i in 0 .. graph.arcs_mut(u).len() {
+        let v = graph.arcs_mut(u)[i].to();
+        if v == p {
+          continue;
+        }
+        self.dfs_size(graph, v, u);
+        self.subtree_size[u] += self.subtree_size[v];
+        if self.subtree_size[v] > self.subtree_size[graph.arcs_mut(u)[0].to()] {
+          graph.arcs_mut(u).swap(0, i);
+        }
+      }
+    }
+    
+    fn dfs_hld(&mut self, graph: &impl AdjacentList, u: usize, p: usize) {
+      let path_id = self.paths.len() - 1;
+      self.path_id[u] = path_id;
+      self.path_index[u] = self.paths[path_id].len();
+      self.paths[path_id].push(u);
+      self.time_in[u] = self.time;
+      self.time += 1;
+      let mut first = true;
+      for e in graph.adjacents(u) {
+        if e.to() == p {
+          continue;
+        }
+        if first {
+          first = false;
+        } else {
+          self.paths.push(vec![]);
+        }
+        self.dfs_hld(graph, e.to(), u);
+      }
+      self.time_out[u] = self.time;
+    }
+    
+  }
 }
 
 use rolling_hash::{ModIntM61, RollingHash, RollingHashedString};
+
 pub mod rolling_hash {
   use std::{ops::*, cell::*, thread_local};
   use rand::prelude::*;
