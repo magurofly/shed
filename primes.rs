@@ -3,16 +3,15 @@
 // 線形篩により limit 以下の素数のリストと最小の素因数のテーブルを生成する O(limit)
 fn linear_sieve(limit: usize) -> (Vec<usize>, Vec<usize>) {
   let mut primes = vec![];
-  let mut table = vec![1; limit + 1];
-  for d in 2 .. limit {
-    if table[limit] == 1 {
-      table[limit] = limit;
+  let mut table = vec![0; limit + 1];
+  for d in 2 ..= limit {
+    if table[d] == 0 {
+      table[d] = d;
       primes.push(d);
-    } else {
-      for &p in &primes {
-        if p * d > limit || p > table[d] { break; }
-        table[p * d] = p;
-      }
+    }
+    for &p in &primes {
+      if p * d > limit || p > table[d] { break; }
+      table[p * d] = p;
     }
   }
   (primes, table)
