@@ -13,16 +13,19 @@ $YESNO = %w(NO YES)
 require "set"
 require "prime"
 
+@buffer = []
+
+def uruu?(y); y % 400 == 0 || y % 100 != 0 && y % 4 == 0 end
 alias say puts
-def string; gets.to_s.chomp end
-def strings; gets.to_s.split end
-def int; string.to_i end
-def int1; int - 1 end
-def ints; strings.map { |s| s.to_i } end
-def int1s; strings.map { |s| s.to_i - 1 } end
-def float; string.to_f end
-def floats; strings.map { |s| s.to_f } end
-def array_of(&convert); strings.map(&convert) end
+def read_words(n = 1); while @buffer.size < n; @buffer.push(*gets.split) end end
+def string(n = nil); n ? strings(n) : (read_words(1); @buffer.shift) end
+def strings(n = nil); read_words(n || 1); n ? @buffer.shift(n) : (b = @buffer; @buffer = []; b) end
+def int(n = nil); n ? ints(n) : string.to_i end
+def int1(n = nil); n ? int1s(n) : int - 1 end
+def ints(n = nil); strings(n).map { |s| s.to_i } end
+def int1s(n = nil); strings(n).map { |s| s.to_i - 1 } end
+def float(n = nil); n ? floats(n) : string.to_f end
+def floats(n = nil); strings(n).map { |s| s.to_f } end
 def rep(n, &b); Array.new(n, &b) end
 def yes; puts $yesno[1] end
 def no; puts $yesno[0] end
