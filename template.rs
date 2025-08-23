@@ -578,7 +578,7 @@ use rolling_hash::{ModIntM61, RollingHash, RollingHashedString};
 
 pub mod rolling_hash {
   use std::{ops::*, cell::*, thread_local};
-  use rand::prelude::*;
+  use rand::{prelude::*, rng};
   
   pub const MOD: u64 = (1 << 61) - 1;
   
@@ -685,7 +685,7 @@ pub mod rolling_hash {
   fn base() -> ModIntM61 {
     BASE.with(|base| {
       while base.get() == 0 {
-        base.set(ModIntM61::from(thread_rng().next_u64()));
+        base.set(ModIntM61::from(rng().next_u64()));
       }
       base.get()
     })
@@ -776,3 +776,4 @@ pub mod rolling_hash {
     }
   }
 }
+
