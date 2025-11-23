@@ -5,6 +5,7 @@ fn main() {
     
   }
 
+
 }
 
 type mint = ModInt998244353;
@@ -27,6 +28,8 @@ use num_integer::*;
 use num_derive::*;
 use permutohedron::*;
 use ac_library::*;
+// use primal::{Primes, Sieve, is_prime};
+use rand::prelude::*;
 
 fn yes() { println!("{YES}"); }
 fn no() { println!("{NO}"); }
@@ -34,6 +37,31 @@ fn yesno(c: bool) { println!("{}", if c { YES } else { NO }); }
 fn say<T: std::fmt::Display>(x: T) -> T { println!("{}", x); x }
 fn neighbor4<F: FnMut(usize, usize)>(i: usize, j: usize, h: usize, w: usize, mut f: F) { if i > 0 { (f)(i - 1, j); } if i < h - 1 { (f)(i + 1, j); } if j > 0 { (f)(i, j - 1); } if j < w - 1 { (f)(i, j + 1); } }
 fn mint(x: impl Sized + Into<mint>) -> mint { x.into() }
+fn rng() -> rand::rngs::ThreadRng { rand::rngs::ThreadRng::default() }
+
+enum Digits {}
+impl proconio::source::Readable for Digits {
+  type Output = Vec<usize>;
+  fn read<R: io::BufRead, S: proconio::source::Source<R>>(source: &mut S) -> Self::Output {
+    source.next_token_unwrap().bytes().map(|b| b as usize - b'0' as usize ).collect()
+  }
+}
+
+enum UpperAlphabet {}
+impl proconio::source::Readable for UpperAlphabet {
+  type Output = Vec<usize>;
+  fn read<R: io::BufRead, S: proconio::source::Source<R>>(source: &mut S) -> Self::Output {
+    source.next_token_unwrap().bytes().map(|b| b as usize - b'A' as usize ).collect()
+  }
+}
+
+enum LowerAlphabet {}
+impl proconio::source::Readable for LowerAlphabet {
+  type Output = Vec<usize>;
+  fn read<R: io::BufRead, S: proconio::source::Source<R>>(source: &mut S) -> Self::Output {
+    source.next_token_unwrap().bytes().map(|b| b as usize - b'a' as usize ).collect()
+  }
+}
 
 struct MaxMonoid<S>(PhantomData<S>);
 impl<S: Copy + PartialOrd + num_traits::bounds::LowerBounded> Monoid for MaxMonoid<S> {
@@ -85,17 +113,6 @@ trait MyOrd : PartialOrd + Sized {
 impl<T: Sized + PartialOrd> MyOrd for T {}
 
 trait MyPrimInt : PrimInt {
-  /// `self ** e` を `m` で割ったあまりを返す
-  fn mod_pow(self, mut e: Self, m: Self) -> Self { let (mut a, mut r) = (self, Self::one()); while e > Self::zero() { if e & Self::one() == Self::one() { r = r * a % m; } a = a * a % m; e = e >> 1; } r }
-  /// 互いに素な場合、 `mod m` における `self` の逆元、そうでない場合、 `self * inv % m == gcd(self, m)` となるような `Err(inv)` を返す
-  fn mod_inv(self, m: Self) -> Result<Self, Self> { let (g, i) = self.ext_gcd(m); if g.is_one() { Ok(i) } else { Err(i) } }
-  /// 素数判定をする。 `self < 2**64` の場合は `O(log self)` 、そうでなければ `O(sqrt self)`
-  fn is_prime(self) -> bool { let u = Self::zero().count_zeros() - self.leading_zeros(); if u <= 8 || u > 64 { self._is_prime_sqrt() } else { self._is_prime_miller_rabin(&if u <= 32 { vec![2, 7, 61] } else { vec![2, 3, 5, 7, 11, 13, 17] }.into_iter().map(MyPrimInt::convert).collect::<Vec<_>>()) } }
-  fn _is_prime_sqrt(self) -> bool { let mut k = 2.convert(); while k * k <= self { if (self % k).is_zero() { return false; } k = k + Self::one(); } true }
-  fn _is_prime_miller_rabin(self, bases: &[Self]) -> bool { if self <= Self::one() { return false; } for &a in bases { if self == a { return true; } if (self % a).is_zero() { return false; } } let mut d = self - Self::one(); d = d >> d.trailing_zeros() as usize; for &a in bases { let mut t = d; let mut y = a.mod_pow(t, self); while !(self - t).is_one() && !y.is_one() && !(self - y).is_one() { y = y * y % self; t = t << 1; } if !(self - y).is_one() && (t % 2.convert()).is_zero() { return false; } } true }
-  /// 拡張ユークリッドの互助法 `(gcd(self, a), x)` s.t. `self * x + a * y == gcd(self, a)` for some y
-  // fn ext_gcd(self, a: Self) -> (Self, Self, Self) { if self < a { let (g, y, x) = a.ext_gcd(self); (g, x, y) } else if a.is_zero() { (self, Self::one(), Self::one()) } else { let (g, y, x) = a.ext_gcd(self % a); (g, x, y - x * (self / a)) } }
-  fn ext_gcd(self, x: Self) -> (Self, Self) { let y = self % x; if y.is_zero() { return (x, y); } let (mut p, mut q) = ((x, Self::zero()), (y, Self::one())); while !q.0.is_zero() { let u = p.0 / q.0; p = (p.0 - q.0 * u, p.1 - q.1 * u); std::mem::swap(&mut p, &mut q); } if p.0 < Self::zero() { p.0 = p.0 + x / p.0; } p }
   /// `(self / other).ceil()`
   fn ceiling_div(self, other: Self) -> Self { (self + other - Self::one()) / other }
   /// `(self / unit).floor() * unit`
@@ -104,7 +121,6 @@ trait MyPrimInt : PrimInt {
   fn align_ceil(self, unit: Self) -> Self { self.ceiling_div(unit) * unit }
   /// 他の整数型に変換する
   fn convert<T: PrimInt>(self) -> T { <T as NumCast>::from(self).unwrap() }
-  fn pow(self, mut e: Self) -> Self { let (mut a, mut r) = (self, Self::one()); while e > Self::zero() { if e & Self::one() == Self::one() { r = r * a; } a = a * a; e = e >> 1; } r }
   /// base を基数としたときの各桁を求める（ 0 のときは vec![0] ）
   fn digits(mut self, base: Self) -> Vec<Self> { assert!(base > Self::zero()); let mut d = vec![]; while self != Self::zero() { d.push(self % base); self = self / base; } d.reverse(); if d.is_empty() { d.push(Self::zero()); }; d }
 }
@@ -578,7 +594,7 @@ use rolling_hash::{ModIntM61, RollingHash, RollingHashedString};
 
 pub mod rolling_hash {
   use std::{ops::*, cell::*, thread_local};
-  use rand::{prelude::*, rng};
+  use rand::prelude::*;
   
   pub const MOD: u64 = (1 << 61) - 1;
   
@@ -685,7 +701,7 @@ pub mod rolling_hash {
   fn base() -> ModIntM61 {
     BASE.with(|base| {
       while base.get() == 0 {
-        base.set(ModIntM61::from(rng().next_u64()));
+        base.set(ModIntM61::from(rand::rngs::ThreadRng::default().next_u64()));
       }
       base.get()
     })
@@ -777,3 +793,149 @@ pub mod rolling_hash {
   }
 }
 
+pub trait FPS<M: Modulus>: std::ops::Deref<Target = [StaticModInt<M>]> {
+    fn fps_add(&self, other: &impl FPS<M>) -> Vec<StaticModInt<M>> {
+        let len = self.len().max(other.len());
+        let mut f = Vec::with_capacity(len);
+        f.extend_from_slice(self);
+        f.resize(len, StaticModInt::from(0));
+        for i in 0 .. other.len() {
+            f[i] += other[i];
+        }
+        f
+    }
+
+    fn fps_sub(&self, other: &impl FPS<M>) -> Vec<StaticModInt<M>> {
+        let len = self.len().max(other.len());
+        let mut f = Vec::with_capacity(len);
+        f.extend_from_slice(self);
+        f.resize(len, StaticModInt::from(0));
+        for i in 0 .. other.len() {
+            f[i] -= other[i];
+        }
+        f
+    }
+
+    fn fps_mul(&self, other: &impl FPS<M>) -> Vec<StaticModInt<M>> {
+        convolution(self, other)
+    }
+
+    fn fps_inv(&self, len: usize) -> Vec<StaticModInt<M>> {
+        assert!(self.len() != 0 && self[0] != StaticModInt::<M>::from(0));
+        let mut r = vec![StaticModInt::<M>::from(1) / self[0]];
+        while r.len() < len {
+            let mut s = r.fps_mul(&r).fps_mul(&&self[.. self.len().min(r.len() * 2)]);
+            s.resize(r.len() * 2, StaticModInt::from(0));
+            for x in &mut s {
+                *x = -*x;
+            }
+            for i in 0 .. r.len() {
+                s[i] += r[i] * 2;
+            }
+            r = s;
+        }
+        r.truncate(len);
+        r
+    }
+
+    fn fps_diff(&self) -> Vec<StaticModInt<M>> {
+        let mut r = Vec::with_capacity(self.len() - 1);
+        for i in 1 .. self.len() {
+            r.push(self[i] * i);
+        }
+        r
+    }
+
+    /// 積分する
+    /// $x^0$ の項は $0$ となる。
+    fn fps_int(&self) -> Vec<StaticModInt<M>> {
+        let mut r = Vec::with_capacity(self.len() + 1);
+        r.push(StaticModInt::from(0));
+        r.extend_from_slice(self);
+        let mut x = (1 ..= self.len()).fold(StaticModInt::from(1), |x, y| x * y ).inv();
+        for i in (1 ..= self.len()).rev() {
+            r[i] *= x;
+            x *= i;
+        }
+        let mut y = StaticModInt::from(1);
+        for i in 1 ..= self.len() {
+            r[i] *= y;
+            y *= i;
+        }
+        r
+    }
+
+    fn fps_log(&self, len: usize) -> Vec<StaticModInt<M>> {
+        if len == 0 {
+            return vec![];
+        }
+        assert!(self.len() > 0 && self[0] == StaticModInt::<M>::from(1));
+        if self.len() == 1 {
+            return vec![];
+        }
+        let f_derive = self.fps_diff();
+        let f_inv = self.fps_inv(len);
+        (&f_derive.fps_mul(&f_inv)[.. len - 1]).fps_int()
+    }
+
+    fn fps_exp(&self, len: usize) -> Vec<StaticModInt<M>> {
+        assert!(self.len() == 0 || self[0] == StaticModInt::<M>::from(0));
+        let mut r = vec![StaticModInt::from(1)];
+        while r.len() < len {
+            let mut s = (&self[.. self.len().min(r.len() * 2)]).fps_sub(&r.fps_log(r.len() * 2));
+            s[0] += 1;
+            s = s.fps_mul(&r);
+            s.truncate(r.len() * 2);
+            r = s;
+        }
+        r.truncate(len);
+        r
+    }
+
+    fn fps_pow(&self, n: usize, len: usize) -> Vec<StaticModInt<M>> {
+        if len == 0 {
+          return vec![];
+        }
+        if n <= 16 {
+          let mut r = vec![StaticModInt::from(1)];
+          let mut f = self.to_vec();
+          f.truncate(len);
+          let mut n = n;
+          while n > 0 {
+            if n & 1 != 0 {
+              r = r.fps_mul(&f);
+              r.truncate(len);
+            }
+            f = f.fps_mul(&f);
+            f.truncate(len);
+            n >>= 1;
+          }
+          r.resize(len, StaticModInt::from(0));
+          return r;
+        }
+        if let Some(i) = (0 .. self.len().min(len / n + 1)).find(|&i| self[i] != StaticModInt::from(0) ) {
+            let c = self[i].inv();
+            let mut f = self[i .. self.len().min(i + len - i * n)].to_vec();
+            for x in &mut f {
+                *x *= c;
+            }
+            f = f.fps_log(len);
+            for x in &mut f {
+                *x *= n;
+            }
+            f = f.fps_exp(len);
+            let d = self[i].pow(n as u64);
+            for x in &mut f {
+                *x *= d;
+            }
+            let mut g = vec![StaticModInt::from(0); i * n];
+            g.extend_from_slice(&f);
+            g.truncate(len);
+            g
+        } else {
+            return vec![StaticModInt::from(0); len];
+        }
+    }
+}
+impl<M: Modulus> FPS<M> for Vec<StaticModInt<M>> {}
+impl<'a, M: Modulus> FPS<M> for &'a [StaticModInt<M>] {}
