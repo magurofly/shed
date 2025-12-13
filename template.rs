@@ -1,11 +1,9 @@
 #![allow(dead_code, unused_imports, unused_macros, non_snake_case, non_camel_case_types)]
 
 fn main() {
-  input! {
-    
-  }
+  input! {}
 
-
+  
 }
 
 type mint = ModInt998244353;
@@ -371,8 +369,8 @@ pub mod adjacent_list {
       dist
     }
 
-    fn euler_tour(&self, root: usize) -> EulerTour {
-      EulerTour::new(self, root)
+    fn heavy_light_decomposition(&mut self, root: usize) -> HeavyLightDecomposition where Self: Sized {
+      HeavyLightDecomposition::new(self, root)
     }
   }
   impl AdjacentList for Vec<Vec<usize>> {
@@ -477,42 +475,6 @@ pub mod adjacent_list {
     fn weight(&self) -> &T { &self.1 }
   }
 
-  #[derive(Clone, Debug)]
-  pub struct EulerTour {
-    pub depth: Vec<usize>,
-    pub preorder: Vec<usize>,
-    pub postorder: Vec<usize>,
-    pub time_in: Vec<usize>,
-    pub time_out: Vec<usize>,
-  }
-  impl EulerTour {
-    pub fn new<G: AdjacentList + ?Sized>(graph: &G, root: usize) -> Self {
-      let mut this = Self {
-        depth: vec![graph.n(); graph.n()],
-        preorder: Vec::with_capacity(graph.n()),
-        postorder: Vec::with_capacity(graph.n()),
-        time_in: vec![graph.n(); graph.n()],
-        time_out: vec![0; graph.n()],
-      };
-      this.depth[root] = 0;
-      this.dfs(graph, root);
-      this
-    }
-
-    fn dfs<G: AdjacentList + ?Sized>(&mut self, graph: &G, u: usize) {
-      self.time_in[u] = self.preorder.len();
-      self.preorder.push(u);
-      for e in graph.adjacents(u) {
-        if self.depth[e.to()] == graph.n() {
-          self.depth[e.to()] = self.depth[u] + 1;
-          self.dfs(graph, e.to());
-        }
-      }
-      self.postorder.push(u);
-      self.time_out[u] = self.preorder.len();
-    }
-  }
-
   #[derive(Clone, Debug, Default)]
   pub struct HeavyLightDecomposition {
     /// 頂点 v を根とする部分木のサイズ
@@ -528,9 +490,16 @@ pub mod adjacent_list {
     /// 頂点 v が属するパスの番号
     pub path_id: Vec<usize>,
     /// 頂点 v が属するパスのうちでのインデックス
-    pub path_index: Vec<usize>,
+    pub index_in_path: Vec<usize>,
     /// パスの配列
+    /// paths[path_id][path_index] = v
     pub paths: Vec<Vec<usize>>,
+    /// パスの深さ
+    /// path_depth[path_id] = depth
+    pub path_depth: Vec<usize>,
+    /// 親頂点
+    /// parent[v] = u
+    pub parent: Vec<usize>,
   }
   impl HeavyLightDecomposition {
     pub fn new(graph: &mut impl AdjacentList, root: usize) -> Self {
@@ -541,8 +510,10 @@ pub mod adjacent_list {
         time: 0,
         ordered: (0 .. graph.n()).collect(),
         path_id: vec![0; graph.n()],
-        path_index: vec![0; graph.n()],
+        index_in_path: vec![0; graph.n()],
         paths: vec![vec![]],
+        path_depth: vec![0],
+        parent: vec![0; graph.n()],
       };
       this.dfs_size(graph, root, root);
       this.dfs_hld(graph, root, root);
@@ -566,9 +537,10 @@ pub mod adjacent_list {
     }
     
     fn dfs_hld(&mut self, graph: &impl AdjacentList, u: usize, p: usize) {
+      self.parent[u] = p;
       let path_id = self.paths.len() - 1;
       self.path_id[u] = path_id;
-      self.path_index[u] = self.paths[path_id].len();
+      self.index_in_path[u] = self.paths[path_id].len();
       self.paths[path_id].push(u);
       self.time_in[u] = self.time;
       self.time += 1;
@@ -581,12 +553,48 @@ pub mod adjacent_list {
           first = false;
         } else {
           self.paths.push(vec![]);
+          let depth = self.path_depth[path_id];
+          self.path_depth.push(depth + 1);
         }
         self.dfs_hld(graph, e.to(), u);
       }
       self.time_out[u] = self.time;
     }
-    
+
+    /// LCA を返す
+    pub fn lca(&self, u: usize, v: usize) -> usize {
+      self.path(u, v).iter().find(|p| p.3 ).unwrap().0
+    }
+
+    /// `from` から `to` までの経路情報を返す
+    /// (time_l, time_r, reversed, contain_lca)
+    pub fn path(&self, mut from: usize, mut to: usize) -> Vec<(usize, usize, bool, bool)> {
+      let mut head = vec![];
+      let mut tail = vec![];
+      while self.path_id[from] != self.path_id[to] {
+        let p = self.path_id[from];
+        let q = self.path_id[to];
+        use std::cmp::Ordering::*;
+        if self.path_depth[p] >= self.path_depth[q] {
+          let path_head = self.paths[p][0];
+          head.push((self.time_in[path_head], self.time_in[from] + 1, true, false));
+          from = self.parent[self.paths[p][0]];
+        }
+        if self.path_depth[p] <= self.path_depth[q] {
+          let path_head = self.paths[q][0];
+          tail.push((self.time_in[path_head], self.time_in[to] + 1, true, false));
+          to = self.parent[path_head];
+        }
+      }
+      if self.index_in_path[from] <= self.index_in_path[to] {
+        head.push((self.time_in[from], self.time_in[to] + 1, false, true));
+      } else {
+        head.push((self.time_in[to], self.time_in[from] + 1, true, true));
+      }
+      tail.reverse();
+      head.append(&mut tail);
+      head
+    }
   }
 }
 
@@ -939,3 +947,4 @@ pub trait FPS<M: Modulus>: std::ops::Deref<Target = [StaticModInt<M>]> {
 }
 impl<M: Modulus> FPS<M> for Vec<StaticModInt<M>> {}
 impl<'a, M: Modulus> FPS<M> for &'a [StaticModInt<M>] {}
+
