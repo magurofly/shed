@@ -29,6 +29,8 @@ use ac_library::*;
 // use primal::{Primes, Sieve, is_prime};
 use rand::prelude::*;
 
+/* #region(collapsed) utils */
+
 fn yes() { println!("{YES}"); }
 fn no() { println!("{NO}"); }
 fn yesno(c: bool) { println!("{}", if c { YES } else { NO }); }
@@ -36,6 +38,43 @@ fn say<T: std::fmt::Display>(x: T) -> T { println!("{}", x); x }
 fn neighbor4<F: FnMut(usize, usize)>(i: usize, j: usize, h: usize, w: usize, mut f: F) { if i > 0 { (f)(i - 1, j); } if i < h - 1 { (f)(i + 1, j); } if j > 0 { (f)(i, j - 1); } if j < w - 1 { (f)(i, j + 1); } }
 fn mint(x: impl Sized + Into<mint>) -> mint { x.into() }
 fn rng() -> rand::rngs::ThreadRng { rand::rngs::ThreadRng::default() }
+
+#[macro_export]
+/// `static_mod!(ModName(modulus, is_prime));`
+macro_rules! static_mod {
+  ($name:ident($value:expr, $is_prime:expr)) => {
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    enum $name {}
+    impl ac_library::modint::Modulus for $name {
+      const VALUE: u32 = $value;
+      const HINT_VALUE_IS_PRIME: bool = $is_prime;
+      fn butterfly_cache() -> &'static ::std::thread::LocalKey<::std::cell::RefCell<::std::option::Option<ac_library::modint::ButterflyCache<Self>>>> {
+        thread_local! {
+          static BUTTERFLY_CACHE: ::std::cell::RefCell<::std::option::Option<ac_library::modint::ButterflyCache<$name>>> = ::std::default::Default::default();
+        }
+        &BUTTERFLY_CACHE
+      }
+    }
+  };
+}
+
+#[macro_export]
+/// ```
+/// dynamic_mod_id!(ModA);
+/// DynamicModInt::<ModA>::set_modulus(value);
+/// ```
+macro_rules! dynamic_mod_id {
+  ($name:ident) => {
+    #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+    pub enum $name {}
+    impl Id for $name {
+        fn companion_barrett() -> &'static ac_library::modint::Barrett {
+            static BARRETT: ac_library::modint::Barrett = ac_library::modint::Barrett::new(998_244_353);
+            &BARRETT
+        }
+    }
+  };
+}
 
 #[macro_export]
 macro_rules! define_queries {
@@ -66,6 +105,38 @@ macro_rules! define_queries {
       }
     )*
   }
+}
+
+#[macro_export]
+macro_rules! segtree {
+  ($M:ident, $S:ty, $op:expr, $e:expr) => {
+    enum $M {}
+    impl ac_library::Monoid for $M {
+      type S = $S;
+      fn binary_operation(x: &Self::S, y: &Self::S) -> Self::S {
+        ($op)(x, y)
+      }
+      fn identity() -> Self::S {
+        ($e)()
+      }
+    }
+  };
+  ($M:ident, $S:ty, $op:expr, $e:expr, $F:ty, $map:expr, $compose:expr, $id:expr) => {
+    segtree!($M, $S, $op, $e);
+    impl ac_library::MapMonoid for $M {
+      type M = $M;
+      type F = $F;
+      fn mapping(f: &Self::F, x: &Self::S) -> Self::S {
+        ($map)(f, x)
+      }
+      fn composition(f: &Self::F, g: &Self::F) -> Self::F {
+        ($compose)(f, g)
+      }
+      fn identity_map() {
+        ($id)()
+      }
+    }
+  };
 }
 
 enum Digits {}
@@ -978,4 +1049,4 @@ pub trait FPS<M: Modulus>: std::ops::Deref<Target = [StaticModInt<M>]> {
 }
 impl<M: Modulus> FPS<M> for Vec<StaticModInt<M>> {}
 impl<'a, M: Modulus> FPS<M> for &'a [StaticModInt<M>] {}
-
+/* #endregion */
