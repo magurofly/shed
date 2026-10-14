@@ -29,6 +29,7 @@ use ac_library::*;
 // use primal::{Primes, Sieve, is_prime};
 use rand::prelude::*;
 
+// https://github.com/magurofly/shed/blob/master/template.rs
 /* #region(collapsed) utils */
 
 fn yes() { println!("{YES}"); }
